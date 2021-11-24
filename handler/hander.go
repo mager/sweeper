@@ -134,7 +134,7 @@ func (h *Handler) getInfo(w http.ResponseWriter, r *http.Request) {
 		collectionsChan = make(chan []opensea.OpenSeaCollection)
 		nftsChan        = make(chan []opensea.OpenSeaAsset)
 		ethPriceChan    = make(chan float64)
-		statsChan       = make(chan []CollectionStat)
+		// statsChan       = make(chan []CollectionStat)
 	)
 
 	// Fetch collections & NFTs from OpenSea
@@ -149,10 +149,10 @@ func (h *Handler) getInfo(w http.ResponseWriter, r *http.Request) {
 	ethPrice = <-ethPriceChan
 
 	// Fetch floor prices from stats endpoint
-	go h.asyncGetOpenSeaCollectionStats(collections, w, statsChan)
-	stats = <-statsChan
-	pretty.Print("STATS!")
-	pretty.Print(stats)
+	// go h.asyncGetOpenSeaCollectionStats(collections, w, statsChan)
+	// stats = <-statsChan
+	// pretty.Print("STATS!")
+	// pretty.Print(stats)
 	// Transform collections
 	adaptedCollections, unrealizedBag := h.adaptCollections(collections, nfts, stats)
 
