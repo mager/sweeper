@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/kr/pretty"
 	"github.com/mager/sweeper/config"
 )
 
@@ -162,7 +161,6 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 	}
 	q := u.Query()
 	u.RawQuery = q.Encode()
-	pretty.Print(u.String())
 
 	// Fetch stats
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -189,7 +187,7 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 	return stat.Stats, nil
 }
 
-// GetCollectionsForAddress returns the assets for an address
+// GetAssetsForAddress returns the assets for an address
 func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenSeaAsset, error) {
 	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=50", offset))
 	if err != nil {
