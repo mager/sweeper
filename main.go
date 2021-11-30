@@ -44,8 +44,19 @@ func Register(
 	database *firestore.Client,
 ) {
 	logger, router, os, bq, cs, cfg, database := common.Register(
-		lc, logger, router, os, bq, cs, s, database,
+		lc,
+		logger,
+		router,
+		os,
+		bq,
+		cs,
+		s,
+		database,
 	)
 
+	// Route handler
 	handler.New(logger, router, os, bq, cs, cfg, database)
+
+	// Run cron tasks
+	// cron.Initialize(logger, s, os, database)
 }

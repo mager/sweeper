@@ -12,4 +12,5 @@ require (
 	github.com/kr/pretty v0.1.0
 	go.uber.org/fx v1.14.2
 	go.uber.org/zap v1.16.0
+	google.golang.org/api v0.59.0
 )
