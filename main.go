@@ -58,5 +58,5 @@ func Register(
 	handler.New(logger, router, os, bq, cs, cfg, database)
 
 	// Run cron tasks
-	// cron.Initialize(logger, s, os, database)
+	cron.Initialize(logger, s, os, database, bq)
 }

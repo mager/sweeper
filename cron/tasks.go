@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/go-co-op/gocron"
 	"github.com/mager/sweeper/opensea"
@@ -16,9 +17,10 @@ type Tasks struct {
 	s        *gocron.Scheduler
 	os       opensea.OpenSeaClient
 	database *firestore.Client
+	bq       *bigquery.Client
 }
 
-func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenSeaClient, database *firestore.Client) *Tasks {
+func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenSeaClient, database *firestore.Client, bq *bigquery.Client) *Tasks {
 	logger.Info("Starting cron")
 	var (
 		ctx = context.TODO()
@@ -28,6 +30,7 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 			s:        s,
 			os:       os,
 			database: database,
+			bq:       bq,
 		}
 	)
 	s.Every(1).Hours().Do(func() {
@@ -45,13 +48,14 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 			logger.Infof("Collection: %v", doc.Data())
 		}
 
-		// Fetch all collections where floor is 0
-		zeroFloorDocs := database.Collection("collections").Where("floor", "==", 0)
-		iter = zeroFloorDocs.Documents(ctx)
+		// Fetch all collections where floor is -1
+		// These were recently added to the database from a new user connecting
+		// their wallet
+		newCollections := database.Collection("collections").Where("floor", "==", -1)
+		iter = newCollections.Documents(ctx)
 		defer iter.Stop()
 
 		for {
-			logger.Infof("Found collections with floor 0")
 			doc, err := iter.Next()
 			if err == iterator.Done {
 				break
@@ -60,7 +64,6 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 				// TODO: Handle error.
 				logger.Error(err)
 			}
-			logger.Info(doc.UpdateTime, doc.Data())
 
 			// Update the floor price
 			t.updateFloorPrice(ctx, doc)
@@ -102,14 +105,49 @@ func (t *Tasks) getOpenSeaFloor(docID string) float64 {
 }
 
 func (t *Tasks) updateFloorPrice(ctx context.Context, doc *firestore.DocumentSnapshot) {
-	docID := doc.Ref.ID
-	floor := t.getOpenSeaFloor(docID)
+	var (
+		docID = doc.Ref.ID
+		floor = t.getOpenSeaFloor(docID)
+		now   = time.Now()
+	)
 	t.logger.Infof("Updating floor price to %v for %s", floor, docID)
 	_, err := doc.Ref.Update(ctx, []firestore.Update{
 		{Path: "floor", Value: floor},
-		{Path: "updated", Value: time.Now()},
+		{Path: "updated", Value: now},
 	})
 	if err != nil {
 		t.logger.Errorf("Error updating floor price: %v", err)
+	}
+	t.recordCollectionsUpdateInBigQuery(docID, floor, now)
+}
+
+type BQCollectionsUpdateRecord struct {
+	Slug        string
+	Floor       float64
+	RequestTime time.Time
+}
+
+// recordCollectionsUpdateInBigQuery posts a info request event to BigQuery
+func (h *Tasks) recordCollectionsUpdateInBigQuery(
+	slug string,
+	floor float64,
+	t time.Time,
+) {
+	var (
+		ctx     = context.Background()
+		dataset = h.bq.DatasetInProject("floor-report-327113", "collections")
+		table   = dataset.Table("update")
+		u       = table.Inserter()
+
+		items = []*BQCollectionsUpdateRecord{
+			{
+				Slug:        slug,
+				Floor:       floor,
+				RequestTime: t,
+			},
+		}
+	)
+	if err := u.Put(ctx, items); err != nil {
+		h.logger.Error(err)
 	}
 }
