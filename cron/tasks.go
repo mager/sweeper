@@ -33,7 +33,7 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 			bq:       bq,
 		}
 	)
-	s.Every(1).Hours().Do(func() {
+	s.Every(6).Hours().Do(func() {
 		// DEBUG: Fetch all collections
 		iter := database.Collection("collections").Documents(ctx)
 		for {
