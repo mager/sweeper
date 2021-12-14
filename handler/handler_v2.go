@@ -16,6 +16,7 @@ type CollectionV2 struct {
 	Name    string    `firestore:"name" json:"name"`
 	Floor   float64   `firestore:"floor" json:"floor"`
 	Slug    string    `firestore:"slug" json:"slug"`
+	Thumb   string    `json:"thumb"`
 	Updated time.Time `firestore:"updated" json:"updated"`
 }
 
@@ -72,8 +73,10 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	go h.asyncGetETHPrice(w, ethPriceChan)
 	ethPrice = <-ethPriceChan
 
+	var slugToThumbMap = make(map[string]string)
 	for _, collection := range collections {
 		collectionSlugDocs = append(collectionSlugDocs, h.database.Collection("collections").Doc(collection.Slug))
+		slugToThumbMap[collection.Slug] = collection.ImageURL
 	}
 
 	// Check if the user's collections are in our database
@@ -90,6 +93,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 				Floor:   ds.Data()["floor"].(float64),
 				Name:    ds.Data()["name"].(string),
 				Slug:    ds.Ref.ID,
+				Thumb:   slugToThumbMap[ds.Ref.ID],
 				Updated: ds.Data()["updated"].(time.Time),
 			}
 		}
@@ -112,6 +116,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 			resp.Collections = append(resp.Collections, c)
 		}
 	}
+
 	if !req.SkipBQ {
 		h.recordRequestInBigQuery(req.Address)
 	}
