@@ -45,7 +45,7 @@ func Initialize(
 			bot:      bot,
 		}
 	)
-	s.Every(6).Hours().Do(func() {
+	s.Every(4).Hours().Do(func() {
 		// Fetch all collections where floor is -1
 		// These were recently added to the database from a new user connecting
 		// their wallet
@@ -67,10 +67,10 @@ func Initialize(
 			t.updateFloorPrice(ctx, doc)
 		}
 
-		// Fetch all collections that haven't been updated in the past 6 hours
-		sixHoursAgo := time.Now().Add(-6 * time.Hour)
-		sixHoursAgoDocs := database.Collection("collections").Where("updated", "<", sixHoursAgo)
-		iter = sixHoursAgoDocs.Documents(ctx)
+		// Fetch all collections that haven't been updated in the past 12 hours
+		lastUpdated := time.Now().Add(-12 * time.Hour)
+		oldDocs := database.Collection("collections").Where("updated", "<", lastUpdated)
+		iter = oldDocs.Documents(ctx)
 		defer iter.Stop()
 
 		for {
@@ -82,8 +82,6 @@ func Initialize(
 				// TODO: Handle error.
 				logger.Error(err)
 			}
-			logger.Info("Found collection with old data")
-			logger.Info(doc.UpdateTime, doc.Data())
 
 			// Update the floor price
 			t.updateFloorPrice(ctx, doc)
