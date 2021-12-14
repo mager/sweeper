@@ -112,9 +112,9 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 			resp.Collections = append(resp.Collections, c)
 		}
 	}
-	// if !req.SkipBQ {
-	// 	h.recordRequestInBigQuery(req.Address, len(nfts), adaptedCollections, unrealizedBag)
-	// }
+	if !req.SkipBQ {
+		h.recordRequestInBigQuery(req.Address)
+	}
 
 	sort.Slice(resp.Collections[:], func(i, j int) bool {
 		return resp.Collections[i].Floor > resp.Collections[j].Floor

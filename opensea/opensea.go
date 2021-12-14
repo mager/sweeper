@@ -171,6 +171,10 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 	}
 
 	resp, err := o.httpClient.Do(req)
+	if resp.StatusCode == http.StatusNotFound {
+		// TODO: Delete collection from Firestore
+		return OpenSeaCollectionStat{}, nil
+	}
 	if err != nil {
 		log.Fatal(err)
 		return OpenSeaCollectionStat{}, nil

@@ -160,7 +160,8 @@ func (h *Handler) getInfo(w http.ResponseWriter, r *http.Request) {
 
 	// Record request in BigQuery
 	if !req.SkipBQ {
-		h.recordRequestInBigQuery(req.Address, len(nfts), adaptedCollections, unrealizedBag)
+		h.recordRequestInBigQuery(req.Address)
+		// h.recordRequestInBigQuery(req.Address, len(nfts), adaptedCollections, unrealizedBag)
 	}
 
 	sort.Slice(adaptedCollections[:], func(i, j int) bool {
@@ -179,9 +180,9 @@ func (h *Handler) getInfo(w http.ResponseWriter, r *http.Request) {
 // recordRequestInBigQuery posts a info request event to BigQuery
 func (h *Handler) recordRequestInBigQuery(
 	address string,
-	numNFTs int,
-	adaptedCollections []Collection,
-	unrealizedBag float64,
+	// numNFTs int,
+	// adaptedCollections []Collection,
+	// unrealizedBag float64,
 ) {
 	var (
 		ctx     = context.Background()
@@ -191,10 +192,10 @@ func (h *Handler) recordRequestInBigQuery(
 
 		items = []*BQInfoRequestRecord{
 			{
-				Address:       address,
-				NumNFTs:       numNFTs,
-				UnrealizedBag: unrealizedBag,
-				RequestTime:   time.Now(),
+				Address: address,
+				// NumNFTs:       numNFTs,
+				// UnrealizedBag: unrealizedBag,
+				RequestTime: time.Now(),
 			},
 		}
 	)

@@ -70,9 +70,9 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 		}
 
 		// Fetch all collections that haven't been updated in the past 6 hours
-		hourAgo := time.Now().Add(-6 * time.Hour)
-		hourAgoDocs := database.Collection("collections").Where("updated", "<", hourAgo)
-		iter = hourAgoDocs.Documents(ctx)
+		sixHoursAgo := time.Now().Add(-6 * time.Hour)
+		sixHoursAgoDocs := database.Collection("collections").Where("updated", "<", sixHoursAgo)
+		iter = sixHoursAgoDocs.Documents(ctx)
 		defer iter.Stop()
 
 		for {
