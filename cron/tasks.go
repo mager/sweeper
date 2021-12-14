@@ -45,24 +45,11 @@ func Initialize(
 		}
 	)
 	s.Every(6).Hours().Do(func() {
-		// DEBUG: Fetch all collections
-		iter := database.Collection("collections").Documents(ctx)
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				logger.Errorf("Error fetching collections: %v", err)
-				break
-			}
-			logger.Infof("Collection: %v", doc.Data())
-		}
 		// Fetch all collections where floor is -1
 		// These were recently added to the database from a new user connecting
 		// their wallet
 		newCollections := database.Collection("collections").Where("floor", "==", -1)
-		iter = newCollections.Documents(ctx)
+		iter := newCollections.Documents(ctx)
 		defer iter.Stop()
 
 		for {
