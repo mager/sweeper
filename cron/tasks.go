@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron"
+	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/opensea"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
@@ -120,14 +121,10 @@ func (t *Tasks) updateFloorPrice(ctx context.Context, doc *firestore.DocumentSna
 	// Post to Discord
 	t.bot.ChannelMessageSend(
 		"920371422457659482",
-		fmt.Sprintf("New floor price for %s (%s): %vΞ", docID, getOpenSeaCollectionURL(docID), floor),
+		fmt.Sprintf("New floor price for %s (%s): %vΞ", docID, common.GetOpenSeaCollectionURL(docID), floor),
 	)
 
 	t.recordCollectionsUpdateInBigQuery(docID, floor, now)
-}
-
-func getOpenSeaCollectionURL(docID string) string {
-	return fmt.Sprintf("https://opensea.io/collection/%s", docID)
 }
 
 type BQCollectionsUpdateRecord struct {

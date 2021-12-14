@@ -11,6 +11,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"github.com/bwmarrin/discordgo"
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/mager/sweeper/coinstats"
@@ -29,6 +30,7 @@ type Handler struct {
 	cs       coinstats.CoinstatsClient
 	cfg      config.Config
 	database *firestore.Client
+	bot      *discordgo.Session
 }
 
 // New creates a Handler struct
@@ -40,8 +42,9 @@ func New(
 	cs coinstats.CoinstatsClient,
 	cfg config.Config,
 	database *firestore.Client,
+	bot *discordgo.Session,
 ) *Handler {
-	h := Handler{logger, router, os, bq, cs, cfg, database}
+	h := Handler{logger, router, os, bq, cs, cfg, database, bot}
 	h.registerRoutes()
 
 	return &h

@@ -66,7 +66,7 @@ func Register(
 	}
 
 	// Route handler
-	handler.New(logger, router, os, bq, cs, cfg, database)
+	handler.New(logger, router, os, bq, cs, cfg, database, bot)
 
 	// Run cron tasks
 	cron.Initialize(logger, s, os, database, bq, bot)

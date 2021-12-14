@@ -3,12 +3,14 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	eth "github.com/ethereum/go-ethereum/common"
+	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/opensea"
 )
 
@@ -166,7 +168,6 @@ func (h *Handler) getNFTsV2(collection opensea.OpenSeaCollection, assets []opens
 }
 
 func (h *Handler) addCollectionToDB(ctx context.Context, collection opensea.OpenSeaCollection, c CollectionV2) {
-	h.logger.Infof("collection slug %s not found in docSnapMap", collection.Slug)
 	// Add collection to db
 	c.Updated = time.Now()
 	_, err := h.database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
@@ -174,5 +175,11 @@ func (h *Handler) addCollectionToDB(ctx context.Context, collection opensea.Open
 		h.logger.Error(err)
 		return
 	}
-	h.logger.Infof("added collection %s to db", collection.Slug)
+
+	h.bot.ChannelMessageSend(
+		"920371422457659482",
+		fmt.Sprintf("Adding new collection %s: %s", collection.Slug, common.GetOpenSeaCollectionURL(collection.Slug)),
+	)
+
+	h.logger.Infof("Added collection %s to db", collection.Slug)
 }
