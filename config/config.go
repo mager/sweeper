@@ -1,5 +1,6 @@
 package config
 
 type Config struct {
-	OpenSeaAPIKey string
+	OpenSeaAPIKey    string
+	DiscordAuthToken string
 }

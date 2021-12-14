@@ -16,14 +16,21 @@ type CollectionV2 struct {
 	Name    string    `firestore:"name" json:"name"`
 	Floor   float64   `firestore:"floor" json:"floor"`
 	Slug    string    `firestore:"slug" json:"slug"`
-	Thumb   string    `json:"thumb"`
 	Updated time.Time `firestore:"updated" json:"updated"`
+}
+
+type CollectionResp struct {
+	Name    string    `json:"name"`
+	Floor   float64   `json:"floor"`
+	Slug    string    `json:"slug"`
+	Thumb   string    `json:"thumb"`
+	Updated time.Time `json:"updated"`
 }
 
 // GetInfoRespV2 is the response for the GET /v2/info endpoint
 type GetInfoRespV2 struct {
-	Collections []CollectionV2 `json:"collections"`
-	ETHPrice    float64        `json:"ethPrice"`
+	Collections []CollectionResp `json:"collections"`
+	ETHPrice    float64          `json:"ethPrice"`
 }
 
 // getInfoV2 is the route handler for the GET /v2/info endpoint
@@ -87,13 +94,20 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var docSnapMap = make(map[string]CollectionV2)
+	var collectionRespMap = make(map[string]CollectionResp)
 	for _, ds := range docsnaps {
 		if ds.Exists() {
+			collectionRespMap[ds.Ref.ID] = CollectionResp{
+				Name:    ds.Data()["name"].(string),
+				Floor:   ds.Data()["floor"].(float64),
+				Slug:    ds.Ref.ID,
+				Updated: ds.Data()["updated"].(time.Time),
+				Thumb:   slugToThumbMap[ds.Ref.ID],
+			}
 			docSnapMap[ds.Ref.ID] = CollectionV2{
 				Floor:   ds.Data()["floor"].(float64),
 				Name:    ds.Data()["name"].(string),
 				Slug:    ds.Ref.ID,
-				Thumb:   slugToThumbMap[ds.Ref.ID],
 				Updated: ds.Data()["updated"].(time.Time),
 			}
 		}
@@ -102,7 +116,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	for _, collection := range collections {
 		// Check docSnapMap to see if collection slug is in there
 		if _, ok := docSnapMap[collection.Slug]; ok {
-			resp.Collections = append(resp.Collections, docSnapMap[collection.Slug])
+			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
 		} else {
 			// Otherwise, add it to the database with floor -1
 			var c = CollectionV2{
@@ -113,7 +127,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 			}
 			go h.addCollectionToDB(ctx, collection, c)
 			// TODO: Save to BQ
-			resp.Collections = append(resp.Collections, c)
+			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
 		}
 	}
 

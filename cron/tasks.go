@@ -2,10 +2,12 @@ package cron
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron"
 	"github.com/mager/sweeper/opensea"
 	"go.uber.org/zap"
@@ -18,9 +20,17 @@ type Tasks struct {
 	os       opensea.OpenSeaClient
 	database *firestore.Client
 	bq       *bigquery.Client
+	bot      *discordgo.Session
 }
 
-func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenSeaClient, database *firestore.Client, bq *bigquery.Client) *Tasks {
+func Initialize(
+	logger *zap.SugaredLogger,
+	s *gocron.Scheduler,
+	os opensea.OpenSeaClient,
+	database *firestore.Client,
+	bq *bigquery.Client,
+	bot *discordgo.Session,
+) *Tasks {
 	logger.Info("Starting cron")
 	var (
 		ctx = context.TODO()
@@ -31,6 +41,7 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 			os:       os,
 			database: database,
 			bq:       bq,
+			bot:      bot,
 		}
 	)
 	s.Every(6).Hours().Do(func() {
@@ -47,7 +58,6 @@ func Initialize(logger *zap.SugaredLogger, s *gocron.Scheduler, os opensea.OpenS
 			}
 			logger.Infof("Collection: %v", doc.Data())
 		}
-
 		// Fetch all collections where floor is -1
 		// These were recently added to the database from a new user connecting
 		// their wallet
@@ -111,6 +121,7 @@ func (t *Tasks) updateFloorPrice(ctx context.Context, doc *firestore.DocumentSna
 		now   = time.Now()
 	)
 	t.logger.Infof("Updating floor price to %v for %s", floor, docID)
+
 	_, err := doc.Ref.Update(ctx, []firestore.Update{
 		{Path: "floor", Value: floor},
 		{Path: "updated", Value: now},
@@ -118,7 +129,18 @@ func (t *Tasks) updateFloorPrice(ctx context.Context, doc *firestore.DocumentSna
 	if err != nil {
 		t.logger.Errorf("Error updating floor price: %v", err)
 	}
+
+	// Post to Discord
+	t.bot.ChannelMessageSend(
+		"920371422457659482",
+		fmt.Sprintf("New floor price for %s (%s): %vΞ", docID, getOpenSeaCollectionURL(docID), floor),
+	)
+
 	t.recordCollectionsUpdateInBigQuery(docID, floor, now)
+}
+
+func getOpenSeaCollectionURL(docID string) string {
+	return fmt.Sprintf("https://opensea.io/collection/%s", docID)
 }
 
 type BQCollectionsUpdateRecord struct {

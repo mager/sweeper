@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"log"
+
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	bq "github.com/mager/sweeper/bigquery"
@@ -54,9 +58,16 @@ func Register(
 		database,
 	)
 
+	// Setup Discord Bot
+	token := fmt.Sprintf("Bot %s", cfg.DiscordAuthToken)
+	bot, err := discordgo.New(token)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
 	// Route handler
 	handler.New(logger, router, os, bq, cs, cfg, database)
 
 	// Run cron tasks
-	cron.Initialize(logger, s, os, database, bq)
+	cron.Initialize(logger, s, os, database, bq, bot)
 }
