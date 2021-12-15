@@ -106,21 +106,24 @@ func (t *Tasks) updateFloorPrice(ctx context.Context, doc *firestore.DocumentSna
 		floor = t.getOpenSeaFloor(docID)
 		now   = time.Now()
 	)
-	t.logger.Infof("Updating floor price to %v for %s", floor, docID)
 
-	_, err := doc.Ref.Update(ctx, []firestore.Update{
-		{Path: "floor", Value: floor},
-		{Path: "updated", Value: now},
-	})
-	if err != nil {
-		t.logger.Errorf("Error updating floor price: %v", err)
+	if floor >= 0.01 {
+		t.logger.Infof("Updating floor price to %v for %s", floor, docID)
+
+		_, err := doc.Ref.Update(ctx, []firestore.Update{
+			{Path: "floor", Value: floor},
+			{Path: "updated", Value: now},
+		})
+		if err != nil {
+			t.logger.Errorf("Error updating floor price: %v", err)
+		}
+
+		// Post to Discord
+		t.bot.ChannelMessageSend(
+			"920371422457659482",
+			fmt.Sprintf("New floor price for %s (%s): %vΞ", docID, common.GetOpenSeaCollectionURL(docID), floor),
+		)
 	}
-
-	// Post to Discord
-	t.bot.ChannelMessageSend(
-		"920371422457659482",
-		fmt.Sprintf("New floor price for %s (%s): %vΞ", docID, common.GetOpenSeaCollectionURL(docID), floor),
-	)
 
 	t.recordCollectionsUpdateInBigQuery(docID, floor, now)
 }
