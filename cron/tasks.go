@@ -170,7 +170,7 @@ func (t *Tasks) updateNewCollections(ctx context.Context) {
 		"920371422457659482",
 		&discordgo.MessageEmbed{
 			Title:       fmt.Sprintf("Updated %d New Collections", count),
-			Description: "7 day volume is over 0.5 ETH",
+			Description: "Collections added in the last 4 hours",
 			Fields: []*discordgo.MessageEmbedField{
 				{
 					Name:   "Slugs",
