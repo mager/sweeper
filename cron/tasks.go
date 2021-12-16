@@ -3,13 +3,13 @@ package cron
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron"
-	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/opensea"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
@@ -22,6 +22,13 @@ type Tasks struct {
 	database *firestore.Client
 	bq       *bigquery.Client
 	bot      *discordgo.Session
+}
+
+type BQCollectionsUpdateRecord struct {
+	Slug           string
+	Floor          float64
+	SevenDayVolume float64
+	RequestTime    time.Time
 }
 
 func Initialize(
@@ -46,46 +53,18 @@ func Initialize(
 		}
 	)
 	s.Every(4).Hours().Do(func() {
-		// Fetch all collections where floor is -1
-		// These were recently added to the database from a new user connecting
-		// their wallet
-		newCollections := database.Collection("collections").Where("floor", "==", -1)
-		iter := newCollections.Documents(ctx)
-		defer iter.Stop()
+		// Update new collections
+		// TODO: Move to handler
+		t.updateNewCollections(ctx)
 
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				// TODO: Handle error.
-				logger.Error(err)
-			}
+		// Update all collections if their 7 day volume is over 0.5 ETH
+		t.updateTierACollections(ctx)
 
-			// Update the floor price
-			t.updateCollectionStats(ctx, doc)
-		}
+	})
 
-		// Fetch all collections that haven't been updated in the past 12 hours
-		lastUpdated := time.Now().Add(-12 * time.Hour)
-		oldDocs := database.Collection("collections").Where("updated", "<", lastUpdated)
-		iter = oldDocs.Documents(ctx)
-		defer iter.Stop()
-
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				// TODO: Handle error.
-				logger.Error(err)
-			}
-
-			// Update the floor price & other stats
-			t.updateCollectionStats(ctx, doc)
-		}
+	s.Every(1).Day().Do(func() {
+		// Update less active collections
+		t.updateTierBCollections(ctx)
 	})
 
 	return &t
@@ -120,23 +99,10 @@ func (t *Tasks) updateCollectionStats(ctx context.Context, doc *firestore.Docume
 		t.logger.Errorf("Error updating floor price: %v", err)
 	}
 
-	// Post to Discord
-	t.bot.ChannelMessageSend(
-		"920371422457659482",
-		fmt.Sprintf("New floor price for %s (%s): %vΞ", docID, common.GetOpenSeaCollectionURL(docID), floor),
-	)
-
 	t.recordCollectionsUpdateInBigQuery(docID, floor, sevenDayVol, now)
 
 	time.Sleep(time.Second * 1)
 	t.logger.Info("Sleeping for 1 second")
-}
-
-type BQCollectionsUpdateRecord struct {
-	Slug           string
-	Floor          float64
-	SevenDayVolume float64
-	RequestTime    time.Time
 }
 
 // recordCollectionsUpdateInBigQuery posts a info request event to BigQuery
@@ -164,4 +130,148 @@ func (h *Tasks) recordCollectionsUpdateInBigQuery(
 	if err := u.Put(ctx, items); err != nil {
 		h.logger.Error(err)
 	}
+}
+
+// updateNewCollections updates collections that were just added
+func (t *Tasks) updateNewCollections(ctx context.Context) {
+	t.logger.Info("Updating new collections")
+
+	// Fetch all collections where floor is -1
+	// These were recently added to the database from a new user connecting
+	// their wallet
+	var (
+		newCollections = t.database.Collection("collections").Where("floor", "==", -1)
+		iter           = newCollections.Documents(ctx)
+		count          = 0
+		slugs          = make([]string, 0)
+	)
+
+	defer iter.Stop()
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// TODO: Handle error.
+			t.logger.Error(err)
+		}
+
+		// Update the floor price
+		t.updateCollectionStats(ctx, doc)
+		count++
+		slugs = append(slugs, doc.Ref.ID)
+
+	}
+
+	// Post to Discord
+	t.bot.ChannelMessageSendEmbed(
+		"920371422457659482",
+		&discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Updated %d New Collections", count),
+			Description: "7 day volume is over 0.5 ETH",
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "Slugs",
+					Value:  strings.Join(slugs, ", "),
+					Inline: true,
+				},
+			},
+		},
+	)
+}
+
+// updateTierACollections updates the database if their 7 day volume is over 0.5 ETH
+func (t *Tasks) updateTierACollections(ctx context.Context) {
+	t.logger.Info("Updating Tier A collections (7 day volume is over 0.5 ETH)")
+
+	var (
+		twelveHoursAgo = time.Now().Add(-12 * time.Hour)
+		iter           = t.database.Collection("collections").Where("updated", "<", twelveHoursAgo).Documents(ctx)
+		count          = 0
+		slugs          = make([]string, 0)
+	)
+	defer iter.Stop()
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// TODO: Handle error.
+			t.logger.Error(err)
+		}
+
+		if doc.Data()["7d"].(float64) > 0.5 {
+			t.updateCollectionStats(ctx, doc)
+
+			count++
+			slugs = append(slugs, doc.Ref.ID)
+		}
+	}
+
+	// Post to Discord
+	t.bot.ChannelMessageSendEmbed(
+		"920371422457659482",
+		&discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Updated %d Tier A Collections", count),
+			Description: "7 day volume is over 0.5 ETH",
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "Slugs",
+					Value:  strings.Join(slugs, ", "),
+					Inline: true,
+				},
+			},
+		},
+	)
+}
+
+// updateTierBCollections updates the database if their 7 day volume is ender 0.6 ETH
+func (t *Tasks) updateTierBCollections(ctx context.Context) {
+	t.logger.Info("Updating Tier B collections (7 day volume is under 0.6 ETH)")
+
+	var (
+		weekAgo = time.Now().Add(-7 * 24 * time.Hour)
+		iter    = t.database.Collection("collections").Where("updated", "<", weekAgo).Documents(ctx)
+		count   = 0
+		slugs   = make([]string, 0)
+	)
+	defer iter.Stop()
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// TODO: Handle error.
+			t.logger.Error(err)
+		}
+
+		if doc.Data()["7d"].(float64) < 0.6 {
+			t.updateCollectionStats(ctx, doc)
+
+			count++
+			slugs = append(slugs, doc.Ref.ID)
+		}
+	}
+
+	// Post to Discord
+	t.bot.ChannelMessageSendEmbed(
+		"920371422457659482",
+		&discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Updated %d Tier B Collections", count),
+			Description: "7 day volume is under 0.6 ETH",
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "Slugs",
+					Value:  strings.Join(slugs, ", "),
+					Inline: true,
+				},
+			},
+		},
+	)
 }
