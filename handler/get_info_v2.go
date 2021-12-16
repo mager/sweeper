@@ -12,6 +12,7 @@ import (
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/opensea"
+	"github.com/mager/sweeper/utils"
 )
 
 type CollectionV2 struct {
@@ -22,16 +23,18 @@ type CollectionV2 struct {
 }
 
 type CollectionResp struct {
-	Name    string    `json:"name"`
-	Floor   float64   `json:"floor"`
-	Slug    string    `json:"slug"`
-	Thumb   string    `json:"thumb"`
-	Updated time.Time `json:"updated"`
+	Name     string    `json:"name"`
+	Floor    float64   `json:"floor"`
+	Slug     string    `json:"slug"`
+	Thumb    string    `json:"thumb"`
+	NumOwned int       `json:"numOwned"`
+	Updated  time.Time `json:"updated"`
 }
 
 // GetInfoRespV2 is the response for the GET /v2/info endpoint
 type GetInfoRespV2 struct {
 	Collections []CollectionResp `json:"collections"`
+	TotalETH    float64          `json:"totalETH"`
 	ETHPrice    float64          `json:"ethPrice"`
 }
 
@@ -63,12 +66,13 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 		ctx         = context.TODO()
 		collections = make([]opensea.OpenSeaCollection, 0)
 		// nfts               = make([]opensea.OpenSeaAsset, 0)
+		// nftsChan           = make(chan []opensea.OpenSeaAsset)
 		collectionSlugDocs = make([]*firestore.DocumentRef, 0)
 		ethPrice           float64
 		collectionsChan    = make(chan []opensea.OpenSeaCollection)
 		ethPriceChan       = make(chan float64)
 		resp               = GetInfoRespV2{}
-		// nftsChan           = make(chan []opensea.OpenSeaAsset)
+		totalETH           float64
 	)
 
 	// Fetch the user's collections & NFTs from OpenSea
@@ -82,10 +86,10 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	go h.asyncGetETHPrice(w, ethPriceChan)
 	ethPrice = <-ethPriceChan
 
-	var slugToThumbMap = make(map[string]string)
+	var slugToOSCollectionMap = make(map[string]opensea.OpenSeaCollection)
 	for _, collection := range collections {
 		collectionSlugDocs = append(collectionSlugDocs, h.database.Collection("collections").Doc(collection.Slug))
-		slugToThumbMap[collection.Slug] = collection.ImageURL
+		slugToOSCollectionMap[collection.Slug] = collection
 	}
 
 	// Check if the user's collections are in our database
@@ -99,19 +103,26 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	var collectionRespMap = make(map[string]CollectionResp)
 	for _, ds := range docsnaps {
 		if ds.Exists() {
+			numOwned := slugToOSCollectionMap[ds.Ref.ID].OwnedAssetCount
+			floor := ds.Data()["floor"].(float64)
+			// This is for the response
 			collectionRespMap[ds.Ref.ID] = CollectionResp{
-				Name:    ds.Data()["name"].(string),
-				Floor:   ds.Data()["floor"].(float64),
-				Slug:    ds.Ref.ID,
-				Updated: ds.Data()["updated"].(time.Time),
-				Thumb:   slugToThumbMap[ds.Ref.ID],
+				Name:     ds.Data()["name"].(string),
+				Floor:    floor,
+				Slug:     ds.Ref.ID,
+				Updated:  ds.Data()["updated"].(time.Time),
+				Thumb:    slugToOSCollectionMap[ds.Ref.ID].ImageURL,
+				NumOwned: numOwned,
 			}
+			// This is for Firestore
 			docSnapMap[ds.Ref.ID] = CollectionV2{
-				Floor:   ds.Data()["floor"].(float64),
+				Floor:   floor,
 				Name:    ds.Data()["name"].(string),
 				Slug:    ds.Ref.ID,
 				Updated: ds.Data()["updated"].(time.Time),
 			}
+
+			totalETH += utils.RoundFloat(float64(numOwned)*floor, 4)
 		}
 	}
 
@@ -142,6 +153,8 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	})
 
 	resp.ETHPrice = ethPrice
+
+	resp.TotalETH = totalETH
 
 	json.NewEncoder(w).Encode(resp)
 }
