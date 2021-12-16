@@ -52,6 +52,10 @@ func Initialize(
 			bot:      bot,
 		}
 	)
+
+	// DEBUG: Custom query
+	// t.updateCollectionsWithCustomQuery(ctx)
+
 	s.Every(4).Hours().Do(func() {
 		// Update new collections
 		// TODO: Move to handler
@@ -272,6 +276,50 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 					Inline: true,
 				},
 			},
+		},
+	)
+}
+
+// updateCollectionsWithCustomQuery updates collections that were just added
+func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
+	t.logger.Info("Updating collections with custom query")
+
+	// Fetch all collections where floor is -1
+	// These were recently added to the database from a new user connecting
+	// their wallet
+	var (
+		q           = "Updated in the last 2 hours"
+		twoHoursAgo = time.Now().Add(-2 * time.Hour)
+
+		collections = t.database.Collection("collections").Where("updated", "<", twoHoursAgo)
+		iter        = collections.Documents(ctx)
+		count       = 0
+	)
+
+	defer iter.Stop()
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// TODO: Handle error.
+			t.logger.Error(err)
+		}
+
+		// Update the floor price
+		t.updateCollectionStats(ctx, doc)
+		count++
+
+	}
+
+	// Post to Discord
+	t.bot.ChannelMessageSendEmbed(
+		"920371422457659482",
+		&discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Updated %d Collections", count),
+			Description: fmt.Sprintf("Custom query: %s", q),
 		},
 	)
 }
