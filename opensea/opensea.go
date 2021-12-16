@@ -26,8 +26,9 @@ type OpenSeaCollection struct {
 
 // OpenSeaCollectionStat represents an OpenSea collection stat object
 type OpenSeaCollectionStat struct {
-	FloorPrice float64 `json:"floor_price"`
-	TotalSales float64 `json:"total_sales"`
+	SevenDayVolume float64 `json:"seven_day_volume"`
+	FloorPrice     float64 `json:"floor_price"`
+	TotalSales     float64 `json:"total_sales"`
 }
 
 // OpenSeaCollectionStatResp represents the response from the v1/collection/{slug}/stats endpoint
