@@ -46,4 +46,6 @@ func (h *Handler) registerRoutes() {
 	h.router.HandleFunc("/v2/info", h.getInfoV2).Methods("POST")
 
 	h.router.HandleFunc("/stats", h.getStats).Methods("GET")
+
+	h.router.HandleFunc("/collection/{slug}", h.getCollection).Methods("GET")
 }

@@ -12,6 +12,19 @@ import (
 	"github.com/mager/sweeper/config"
 )
 
+// OpenSeaV1CollectionResp represents an OpenSea collection and also the response from
+// the v1/collection/{slug} endpoint
+type OpenSeaCollectionResp struct {
+	Collection OpenSeaCollectionCollection `json:"collection"`
+}
+
+// OpenSeaCollectionCollection is the inner collection object
+type OpenSeaCollectionCollection struct {
+	Name     string `json:"name"`
+	Slug     string `json:"slug"`
+	ImageURL string `json:"image_url"`
+}
+
 // OpenSeaCollection represents an OpenSea collection and also the response from
 // the v1/collections endpoint
 type OpenSeaCollection struct {
@@ -271,4 +284,40 @@ func (o *OpenSeaClient) GetAllAssetsForAddress(address string) ([]OpenSeaAsset, 
 		assets = append(assets, fifth50...)
 	}
 	return assets, nil
+}
+
+// GetCollection returns the collection from OpenSea
+func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error) {
+	var collection OpenSeaCollectionResp
+
+	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/collection/%s", slug))
+	if err != nil {
+		log.Fatal(err)
+		return collection, nil
+	}
+	q := u.Query()
+	u.RawQuery = q.Encode()
+
+	// Fetch collection
+	req, err := http.NewRequest("GET", u.String(), nil)
+	req.Header.Set("X-API-KEY", o.apiKey)
+	if err != nil {
+		log.Fatal(err)
+		return collection, nil
+	}
+
+	resp, err := o.httpClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		return collection, nil
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&collection)
+	if err != nil {
+		log.Fatal(err)
+		return collection, nil
+	}
+
+	return collection, nil
 }

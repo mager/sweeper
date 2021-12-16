@@ -25,8 +25,6 @@ func (h *Handler) getStats(w http.ResponseWriter, r *http.Request) {
 		updated     = time.Time{}
 	)
 
-	// Find latest updated collection
-
 	// Fetch all collections
 	iter := collections.Documents(ctx)
 	for {
