@@ -142,6 +142,11 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string) ([]OpenSeaColle
 	}
 	defer resp.Body.Close()
 
+	if resp.Status == "429 Too Many Requests" {
+		log.Println("Too many requests, please try again later")
+		return []OpenSeaCollection{}, nil
+	}
+
 	var openSeaCollections []OpenSeaCollection
 	err = json.NewDecoder(resp.Body).Decode(&openSeaCollections)
 	if err != nil {
