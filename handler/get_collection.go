@@ -10,6 +10,7 @@ import (
 )
 
 type GetCollectionResp struct {
+	Name            string    `json:"name"`
 	Slug            string    `json:"slug"`
 	Floor           float64   `json:"floor"`
 	WeeklyVolumeETH float64   `json:"weeklyVolumeETH"`
@@ -37,6 +38,7 @@ func (h *Handler) getCollection(w http.ResponseWriter, r *http.Request) {
 	d := docsnap.Data()
 
 	// Set slug
+	resp.Name = d["name"].(string)
 	resp.Slug = slug
 	resp.Floor = d["floor"].(float64)
 	resp.WeeklyVolumeETH = d["7d"].(float64)
