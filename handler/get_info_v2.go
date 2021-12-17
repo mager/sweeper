@@ -6,20 +6,22 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/bwmarrin/discordgo"
 	eth "github.com/ethereum/go-ethereum/common"
-	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 )
 
 type CollectionV2 struct {
-	Name    string    `firestore:"name" json:"name"`
-	Floor   float64   `firestore:"floor" json:"floor"`
-	Slug    string    `firestore:"slug" json:"slug"`
-	Updated time.Time `firestore:"updated" json:"updated"`
+	Name           string    `firestore:"name" json:"name"`
+	Floor          float64   `firestore:"floor" json:"floor"`
+	Slug           string    `firestore:"slug" json:"slug"`
+	SevenDayVolume float64   `firestore:"7d" json:"7d"`
+	Updated        time.Time `firestore:"updated" json:"updated"`
 }
 
 type CollectionResp struct {
@@ -126,6 +128,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var slugsToAdd = make([]string, 0)
 	for _, collection := range collections {
 		// Check docSnapMap to see if collection slug is in there
 		if _, ok := docSnapMap[collection.Slug]; ok {
@@ -141,8 +144,25 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 			go h.addCollectionToDB(ctx, collection, c)
 			// TODO: Save to BQ
 			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
+			slugsToAdd = append(slugsToAdd, collection.Slug)
 		}
 	}
+
+	// Post to Discord
+	h.bot.ChannelMessageSendEmbed(
+		"920371422457659482",
+		&discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Added %d new Collections", len(slugsToAdd)),
+			Description: fmt.Sprintf("Wallet %s joined the party", req.Address),
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "Slugs",
+					Value:  strings.Join(slugsToAdd, ", "),
+					Inline: true,
+				},
+			},
+		},
+	)
 
 	if !req.SkipBQ {
 		h.recordRequestInBigQuery(req.Address)
@@ -183,16 +203,25 @@ func (h *Handler) getNFTsV2(collection opensea.OpenSeaCollection, assets []opens
 func (h *Handler) addCollectionToDB(ctx context.Context, collection opensea.OpenSeaCollection, c CollectionV2) {
 	// Add collection to db
 	c.Updated = time.Now()
+
+	// Get stats
+	stat := h.getOpenSeaStats(collection.Slug)
+	c.Floor = stat.FloorPrice
+	c.SevenDayVolume = stat.SevenDayVolume
 	_, err := h.database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
 	if err != nil {
 		h.logger.Error(err)
 		return
 	}
 
-	h.bot.ChannelMessageSend(
-		"920371422457659482",
-		fmt.Sprintf("Adding new collection %s: %s", collection.Slug, common.GetOpenSeaCollectionURL(collection.Slug)),
-	)
-
 	h.logger.Infof("Added collection %s to db", collection.Slug)
+}
+
+// getOpenSeaStats gets the floor price from collections on OpenSea
+func (h *Handler) getOpenSeaStats(docID string) opensea.OpenSeaCollectionStat {
+	stat, err := h.os.GetCollectionStatsForSlug(docID)
+	if err != nil {
+		h.logger.Error(err)
+	}
+	return stat
 }
