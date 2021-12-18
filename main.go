@@ -10,6 +10,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	bq "github.com/mager/sweeper/bigquery"
+	"github.com/mager/sweeper/bot"
 	cs "github.com/mager/sweeper/coinstats"
 	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/cron"
@@ -41,17 +42,17 @@ func Register(
 	lc fx.Lifecycle,
 	logger *zap.SugaredLogger,
 	router *mux.Router,
-	os opensea.OpenSeaClient,
+	openSeaClient opensea.OpenSeaClient,
 	bq *bigquery.Client,
 	cs cs.CoinstatsClient,
 	s *gocron.Scheduler,
 	database *firestore.Client,
 ) {
-	logger, router, os, bq, cs, cfg, database := common.Register(
+	logger, router, openSeaClient, bq, cs, cfg, database := common.Register(
 		lc,
 		logger,
 		router,
-		os,
+		openSeaClient,
 		bq,
 		cs,
 		s,
@@ -60,14 +61,17 @@ func Register(
 
 	// Setup Discord Bot
 	token := fmt.Sprintf("Bot %s", cfg.DiscordAuthToken)
-	bot, err := discordgo.New(token)
+	dg, err := discordgo.New(token)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
 	// Route handler
-	handler.New(logger, router, os, bq, cs, cfg, database, bot)
+	handler.New(logger, router, openSeaClient, bq, cs, cfg, database, dg)
 
 	// Run cron tasks
-	cron.Initialize(logger, s, os, database, bq, bot)
+	cron.Initialize(logger, s, openSeaClient, database, bq, dg)
+
+	// Discord bot
+	bot.New(dg, logger, database, openSeaClient)
 }

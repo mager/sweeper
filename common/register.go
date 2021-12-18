@@ -21,7 +21,7 @@ func Register(
 	lc fx.Lifecycle,
 	logger *zap.SugaredLogger,
 	router *mux.Router,
-	os opensea.OpenSeaClient,
+	openSeaClient opensea.OpenSeaClient,
 	bq *bigquery.Client,
 	cs cs.CoinstatsClient,
 	s *gocron.Scheduler,
@@ -56,6 +56,7 @@ func Register(
 				s.StartAsync()
 
 				go http.ListenAndServe(addr, router)
+
 				return nil
 			},
 			OnStop: func(context.Context) error {
@@ -65,5 +66,5 @@ func Register(
 		},
 	)
 
-	return logger, router, os, bq, cs, cfg, database
+	return logger, router, openSeaClient, bq, cs, cfg, database
 }
