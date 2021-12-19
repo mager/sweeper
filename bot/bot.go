@@ -55,8 +55,11 @@ func messageCreate(logger *zap.SugaredLogger, database *firestore.Client, openSe
 
 // fCommand is a command that returns the floor for a collection
 func fCommand(logger *zap.SugaredLogger, database *firestore.Client, s *discordgo.Session, m *discordgo.MessageCreate) {
-	var ctx = context.TODO()
-	var re = regexp.MustCompile(`^(?m)f (.*)`)
+	var (
+		ctx = context.TODO()
+		re  = regexp.MustCompile(`^(?m)f (.*)`)
+	)
+
 	for i, match := range re.FindAllString(m.Content, -1) {
 		if i == 0 {
 			// The slug is everything after `f `
@@ -66,7 +69,7 @@ func fCommand(logger *zap.SugaredLogger, database *firestore.Client, s *discordg
 			docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
 			if err != nil {
 				logger.Errorw("Error fetching document", "error", err)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error fetching floor for %s", slug))
+				s.ChannelMessageSend("921926230725525505", fmt.Sprintf("Error fetching floor for %s", slug))
 				return
 			}
 
@@ -79,7 +82,7 @@ func fCommand(logger *zap.SugaredLogger, database *firestore.Client, s *discordg
 			msg.WriteString(fmt.Sprintf("%.2f", floorPrice))
 			msg.WriteString(fmt.Sprintf(" (last updated %s)", humanize.Time(docsnap.Data()["updated"].(time.Time))))
 
-			s.ChannelMessageSend(m.ChannelID, msg.String())
+			s.ChannelMessageSend("921926230725525505", msg.String())
 		}
 	}
 }
@@ -91,8 +94,11 @@ func uCommand(
 	openSeaClient opensea.OpenSeaClient,
 	s *discordgo.Session,
 	m *discordgo.MessageCreate) {
-	var ctx = context.TODO()
-	var re = regexp.MustCompile(`^(?m)u (.*)`)
+	var (
+		ctx = context.TODO()
+		re  = regexp.MustCompile(`^(?m)u (.*)`)
+	)
+
 	for i, match := range re.FindAllString(m.Content, -1) {
 		if i == 0 {
 			// The slug is everything after `u `
@@ -102,49 +108,12 @@ func uCommand(
 			docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
 			if err != nil {
 				logger.Errorw("Error fetching document", "error", err)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error fetching floor for %s", slug))
+				s.ChannelMessageSend("921926230725525505", fmt.Sprintf("Error fetching floor for %s", slug))
 				return
 			}
 
-			floor := updateCollectionStats(ctx, logger, docsnap, openSeaClient)
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("The floor price for %s was updated to: %.2f", slug, floor))
+			floor := openSeaClient.UpdateCollectionStats(ctx, logger, docsnap)
+			s.ChannelMessageSend("921926230725525505", fmt.Sprintf("The floor price for %s was updated to: %.2f", slug, floor))
 		}
 	}
-}
-
-func updateCollectionStats(
-	ctx context.Context,
-	logger *zap.SugaredLogger,
-	doc *firestore.DocumentSnapshot,
-	openSeaClient opensea.OpenSeaClient,
-) float64 {
-	var (
-		docID       = doc.Ref.ID
-		stats       = getOpenSeaStats(openSeaClient, logger, docID)
-		floor       = stats.FloorPrice
-		sevenDayVol = stats.SevenDayVolume
-		now         = time.Now()
-	)
-
-	logger.Infof("Updating floor price to %v for %s", floor, docID)
-
-	_, err := doc.Ref.Update(ctx, []firestore.Update{
-		{Path: "floor", Value: floor},
-		{Path: "7d", Value: sevenDayVol},
-		{Path: "updated", Value: now},
-	})
-	if err != nil {
-		logger.Errorw("Error updating document", "error", err)
-	}
-
-	return floor
-}
-
-// getOpenSeaStats gets the floor price from collections on OpenSea
-func getOpenSeaStats(openSeaClient opensea.OpenSeaClient, logger *zap.SugaredLogger, docID string) opensea.OpenSeaCollectionStat {
-	stat, err := openSeaClient.GetCollectionStatsForSlug(docID)
-	if err != nil {
-		logger.Error(err)
-	}
-	return stat
 }

@@ -74,41 +74,6 @@ func Initialize(
 	return &t
 }
 
-// getOpenSeaStats gets the floor price from collections on OpenSea
-func (t *Tasks) getOpenSeaStats(docID string) opensea.OpenSeaCollectionStat {
-	stat, err := t.os.GetCollectionStatsForSlug(docID)
-	if err != nil {
-		t.logger.Error(err)
-	}
-	return stat
-}
-
-func (t *Tasks) updateCollectionStats(ctx context.Context, doc *firestore.DocumentSnapshot) {
-	var (
-		docID       = doc.Ref.ID
-		stats       = t.getOpenSeaStats(docID)
-		floor       = stats.FloorPrice
-		sevenDayVol = stats.SevenDayVolume
-		now         = time.Now()
-	)
-
-	t.logger.Infof("Updating floor price to %v for %s", floor, docID)
-
-	_, err := doc.Ref.Update(ctx, []firestore.Update{
-		{Path: "floor", Value: floor},
-		{Path: "7d", Value: sevenDayVol},
-		{Path: "updated", Value: now},
-	})
-	if err != nil {
-		t.logger.Errorf("Error updating floor price: %v", err)
-	}
-
-	t.recordCollectionsUpdateInBigQuery(docID, floor, sevenDayVol, now)
-
-	time.Sleep(time.Second * 1)
-	t.logger.Info("Sleeping for 1 second")
-}
-
 // recordCollectionsUpdateInBigQuery posts a info request event to BigQuery
 func (h *Tasks) recordCollectionsUpdateInBigQuery(
 	slug string,
@@ -163,7 +128,7 @@ func (t *Tasks) updateNewCollections(ctx context.Context) {
 		}
 
 		// Update the floor price
-		t.updateCollectionStats(ctx, doc)
+		t.os.UpdateCollectionStats(ctx, t.logger, doc)
 		count++
 		slugs = append(slugs, doc.Ref.ID)
 
@@ -209,7 +174,7 @@ func (t *Tasks) updateTierACollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) > 0.5 {
-			t.updateCollectionStats(ctx, doc)
+			t.os.UpdateCollectionStats(ctx, t.logger, doc)
 
 			count++
 			slugs = append(slugs, doc.Ref.ID)
@@ -256,7 +221,7 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) < 0.6 {
-			t.updateCollectionStats(ctx, doc)
+			t.os.UpdateCollectionStats(ctx, t.logger, doc)
 
 			count++
 			slugs = append(slugs, doc.Ref.ID)
@@ -309,7 +274,7 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 		}
 
 		// Update the floor price
-		t.updateCollectionStats(ctx, doc)
+		t.os.UpdateCollectionStats(ctx, t.logger, doc)
 		count++
 
 	}

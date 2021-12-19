@@ -1,6 +1,7 @@
 package opensea
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,8 +9,10 @@ import (
 	"net/url"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/mager/sweeper/config"
+	"go.uber.org/zap"
 )
 
 // OpenSeaV1CollectionResp represents an OpenSea collection and also the response from
@@ -320,4 +323,33 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	}
 
 	return collection, nil
+}
+
+func (o *OpenSeaClient) UpdateCollectionStats(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	doc *firestore.DocumentSnapshot,
+) float64 {
+	var docID = doc.Ref.ID
+
+	stats, err := o.GetCollectionStatsForSlug(docID)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	var (
+		floor       = stats.FloorPrice
+		sevenDayVol = stats.SevenDayVolume
+		now         = time.Now()
+	)
+
+	logger.Infof("Updating floor price to %v for %s", floor, docID)
+
+	doc.Ref.Update(ctx, []firestore.Update{
+		{Path: "floor", Value: floor},
+		{Path: "7d", Value: sevenDayVol},
+		{Path: "updated", Value: now},
+	})
+
+	return floor
 }
