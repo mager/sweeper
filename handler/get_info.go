@@ -92,11 +92,11 @@ func (h *Handler) getInfo(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		// ctx             = context.TODO()
-		collections     = make([]opensea.OpenSeaCollection, 0)
+		collections     = make([]opensea.OpenSeaCollectionCollection, 0)
 		nfts            = make([]opensea.OpenSeaAsset, 0)
 		ethPrice        float64
 		stats           []CollectionStat
-		collectionsChan = make(chan []opensea.OpenSeaCollection)
+		collectionsChan = make(chan []opensea.OpenSeaCollectionCollection)
 		nftsChan        = make(chan []opensea.OpenSeaAsset)
 		ethPriceChan    = make(chan float64)
 		// statsChan       = make(chan []CollectionStat)
@@ -165,7 +165,7 @@ func (h *Handler) recordRequestInBigQuery(
 	}
 }
 
-func (h *Handler) adaptCollections(collections []opensea.OpenSeaCollection, assets []opensea.OpenSeaAsset, stats []CollectionStat) ([]Collection, float64) {
+func (h *Handler) adaptCollections(collections []opensea.OpenSeaCollectionCollection, assets []opensea.OpenSeaAsset, stats []CollectionStat) ([]Collection, float64) {
 	var (
 		result             []Collection
 		totalUnrealizedBag float64 = 0.0
@@ -192,7 +192,7 @@ func (h *Handler) adaptCollections(collections []opensea.OpenSeaCollection, asse
 	return result, utils.RoundFloat(totalUnrealizedBag, 3)
 }
 
-func getFloorPrice(collection opensea.OpenSeaCollection, stats []CollectionStat) float64 {
+func getFloorPrice(collection opensea.OpenSeaCollectionCollection, stats []CollectionStat) float64 {
 	// Find the matching slug from the CollectionStat in the OpenSeaCollection collection
 	for _, stat := range stats {
 		if stat.Slug == collection.Slug {
@@ -203,11 +203,11 @@ func getFloorPrice(collection opensea.OpenSeaCollection, stats []CollectionStat)
 	return collection.OpenSeaStats.FloorPrice
 }
 
-func getOneDayChange(collection opensea.OpenSeaCollection) float64 {
+func getOneDayChange(collection opensea.OpenSeaCollectionCollection) float64 {
 	return collection.OpenSeaStats.OneDayChange
 }
 
-func (h *Handler) getNFTs(collection opensea.OpenSeaCollection, assets []opensea.OpenSeaAsset) []NFT {
+func (h *Handler) getNFTs(collection opensea.OpenSeaCollectionCollection, assets []opensea.OpenSeaAsset) []NFT {
 	if len(collection.PrimaryAssetContracts) == 0 {
 		return []NFT{}
 	}
@@ -289,7 +289,7 @@ func getPhoto(nfts []opensea.OpenSeaAsset) string {
 }
 
 // getOpenSeaCollectionStats gets the stats from collections on OpenSea
-func (h *Handler) asyncGetOpenSeaCollectionStats(collections []opensea.OpenSeaCollection, w http.ResponseWriter, rc chan []CollectionStat) {
+func (h *Handler) asyncGetOpenSeaCollectionStats(collections []opensea.OpenSeaCollectionCollection, w http.ResponseWriter, rc chan []CollectionStat) {
 	stats := make([]CollectionStat, 0)
 
 	for _, collection := range collections {
@@ -311,7 +311,7 @@ func (h *Handler) asyncGetOpenSeaCollectionStats(collections []opensea.OpenSeaCo
 }
 
 // asyncGetOpenSeaCollections gets the collections from OpenSea
-func (h *Handler) asyncGetOpenSeaCollections(address string, w http.ResponseWriter, rc chan []opensea.OpenSeaCollection) {
+func (h *Handler) asyncGetOpenSeaCollections(address string, w http.ResponseWriter, rc chan []opensea.OpenSeaCollectionCollection) {
 	collections, err := h.os.GetCollectionsForAddress(address)
 
 	if err != nil {

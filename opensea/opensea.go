@@ -18,19 +18,20 @@ import (
 // OpenSeaV1CollectionResp represents an OpenSea collection and also the response from
 // the v1/collection/{slug} endpoint
 type OpenSeaCollectionResp struct {
-	Collection OpenSeaCollectionCollection `json:"collection"`
+	Collection OpenSeaCollection `json:"collection"`
 }
 
-// OpenSeaCollectionCollection is the inner collection object
-type OpenSeaCollectionCollection struct {
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	ImageURL string `json:"image_url"`
-}
-
-// OpenSeaCollection represents an OpenSea collection and also the response from
-// the v1/collections endpoint
+// OpenSeaCollection is the inner collection object
 type OpenSeaCollection struct {
+	Name     string                `json:"name"`
+	Slug     string                `json:"slug"`
+	ImageURL string                `json:"image_url"`
+	Stats    OpenSeaCollectionStat `json:"stats"`
+}
+
+// OpenSeaCollectionCollection represents an OpenSea collection and also the response from
+// the v1/collections endpoint
+type OpenSeaCollectionCollection struct {
 	Name                  string                         `json:"name"`
 	FloorPrice            float64                        `json:"floor_price"`
 	PrimaryAssetContracts []OpenSeaPrimaryAssetContracts `json:"primary_asset_contracts"`
@@ -42,9 +43,15 @@ type OpenSeaCollection struct {
 
 // OpenSeaCollectionStat represents an OpenSea collection stat object
 type OpenSeaCollectionStat struct {
-	SevenDayVolume float64 `json:"seven_day_volume"`
-	FloorPrice     float64 `json:"floor_price"`
-	TotalSales     float64 `json:"total_sales"`
+	OneDayVolume    float64 `json:"one_day_volume"`
+	SevenDayVolume  float64 `json:"seven_day_volume"`
+	ThirtyDayVolume float64 `json:"thirty_day_volume"`
+	TotalVolume     float64 `json:"total_volume"`
+	NumOwners       int     `json:"num_owners"`
+	TotalSupply     float64 `json:"total_supply"`
+	MarketCap       float64 `json:"market_cap"`
+	FloorPrice      float64 `json:"floor_price"`
+	TotalSales      float64 `json:"total_sales"`
 }
 
 // OpenSeaCollectionStatResp represents the response from the v1/collection/{slug}/stats endpoint
@@ -134,11 +141,11 @@ func ProvideOpenSea() OpenSeaClient {
 var Options = ProvideOpenSea
 
 // GetCollectionsForAddress returns the collections for an address
-func (o *OpenSeaClient) GetCollectionsForAddress(address string) ([]OpenSeaCollection, error) {
+func (o *OpenSeaClient) GetCollectionsForAddress(address string) ([]OpenSeaCollectionCollection, error) {
 	u, err := url.Parse("https://api.opensea.io/api/v1/collections?&offset=0&limit=50")
 	if err != nil {
 		log.Fatal(err)
-		return []OpenSeaCollection{}, nil
+		return []OpenSeaCollectionCollection{}, nil
 	}
 	q := u.Query()
 	q.Set("asset_owner", address)
@@ -149,26 +156,26 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string) ([]OpenSeaColle
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
 		log.Fatal(err)
-		return []OpenSeaCollection{}, nil
+		return []OpenSeaCollectionCollection{}, nil
 	}
 
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
 		log.Fatal(err)
-		return []OpenSeaCollection{}, nil
+		return []OpenSeaCollectionCollection{}, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.Status == "429 Too Many Requests" {
 		log.Println("Too many requests, please try again later")
-		return []OpenSeaCollection{}, nil
+		return []OpenSeaCollectionCollection{}, nil
 	}
 
-	var openSeaCollections []OpenSeaCollection
+	var openSeaCollections []OpenSeaCollectionCollection
 	err = json.NewDecoder(resp.Body).Decode(&openSeaCollections)
 	if err != nil {
 		log.Fatal(err)
-		return []OpenSeaCollection{}, nil
+		return []OpenSeaCollectionCollection{}, nil
 	}
 
 	return openSeaCollections, nil
@@ -316,8 +323,12 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	}
 	defer resp.Body.Close()
 
+	// bodyBytes, err := io.ReadAll(resp.Body)
+	// bodyString := string(bodyBytes)
+	// pretty.Print(bodyString)
 	err = json.NewDecoder(resp.Body).Decode(&collection)
 	if err != nil {
+		log.Println("FOOO")
 		log.Fatal(err)
 		return collection, nil
 	}

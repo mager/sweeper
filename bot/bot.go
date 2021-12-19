@@ -20,9 +20,13 @@ func New(
 	database *firestore.Client,
 	openSeaClient opensea.OpenSeaClient,
 ) {
-	var err error
+	var (
+		err error
+		ctx = context.TODO()
+	)
+
 	// Register the messageCreate func as a callback for MessageCreate events.
-	dg.AddHandler(messageCreate(logger, database, openSeaClient))
+	dg.AddHandler(messageCreate(ctx, logger, database, openSeaClient))
 
 	// In this example, we only care about receiving message events.
 	dg.Identify.Intents = discordgo.IntentsGuildMessages
@@ -38,7 +42,7 @@ func New(
 	defer dg.Close()
 }
 
-func messageCreate(logger *zap.SugaredLogger, database *firestore.Client, openSeaClient opensea.OpenSeaClient) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func messageCreate(ctx context.Context, logger *zap.SugaredLogger, database *firestore.Client, openSeaClient opensea.OpenSeaClient) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		// Ignore all messages created by the bot itself
@@ -48,16 +52,21 @@ func messageCreate(logger *zap.SugaredLogger, database *firestore.Client, openSe
 		}
 
 		// floor command
-		fCommand(logger, database, s, m)
-		uCommand(logger, database, openSeaClient, s, m)
+		fCommand(ctx, logger, database, s, m)
+		// uCommand(ctx, logger, database, openSeaClient, s, m)
 	}
 }
 
 // fCommand is a command that returns the floor for a collection
-func fCommand(logger *zap.SugaredLogger, database *firestore.Client, s *discordgo.Session, m *discordgo.MessageCreate) {
+func fCommand(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	database *firestore.Client,
+	s *discordgo.Session,
+	m *discordgo.MessageCreate,
+) {
 	var (
-		ctx = context.TODO()
-		re  = regexp.MustCompile(`^(?m)f (.*)`)
+		re = regexp.MustCompile(`^(?m)f (.*)`)
 	)
 
 	for i, match := range re.FindAllString(m.Content, -1) {
@@ -88,32 +97,32 @@ func fCommand(logger *zap.SugaredLogger, database *firestore.Client, s *discordg
 }
 
 // uCommand is a command that updates the floor for a collection
-func uCommand(
-	logger *zap.SugaredLogger,
-	database *firestore.Client,
-	openSeaClient opensea.OpenSeaClient,
-	s *discordgo.Session,
-	m *discordgo.MessageCreate) {
-	var (
-		ctx = context.TODO()
-		re  = regexp.MustCompile(`^(?m)u (.*)`)
-	)
+// func uCommand(
+// 	ctx context.Context,
+// 	logger *zap.SugaredLogger,
+// 	database *firestore.Client,
+// 	openSeaClient opensea.OpenSeaClient,
+// 	s *discordgo.Session,
+// 	m *discordgo.MessageCreate) {
+// 	var (
+// 		re = regexp.MustCompile(`^(?m)u (.*)`)
+// 	)
 
-	for i, match := range re.FindAllString(m.Content, -1) {
-		if i == 0 {
-			// The slug is everything after `u `
-			var slug = match[2:]
+// 	for i, match := range re.FindAllString(m.Content, -1) {
+// 		if i == 0 {
+// 			// The slug is everything after `u `
+// 			var slug = match[2:]
 
-			// Fetch the record from database
-			docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
-			if err != nil {
-				logger.Errorw("Error fetching document", "error", err)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error fetching floor for %s", slug))
-				return
-			}
+// 			// Fetch the record from database
+// 			docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
+// 			if err != nil {
+// 				logger.Errorw("Error fetching document", "error", err)
+// 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error fetching floor for %s", slug))
+// 				return
+// 			}
 
-			floor := openSeaClient.UpdateCollectionStats(ctx, logger, docsnap)
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("The floor price for %s was updated to: %.2f", slug, floor))
-		}
-	}
-}
+// 			floor := openSeaClient.UpdateCollectionStats(ctx, logger, docsnap)
+// 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("The floor price for %s was updated to: %.2f", slug, floor))
+// 		}
+// 	}
+// }

@@ -66,12 +66,12 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		ctx         = context.TODO()
-		collections = make([]opensea.OpenSeaCollection, 0)
+		collections = make([]opensea.OpenSeaCollectionCollection, 0)
 		// nfts               = make([]opensea.OpenSeaAsset, 0)
 		// nftsChan           = make(chan []opensea.OpenSeaAsset)
 		collectionSlugDocs = make([]*firestore.DocumentRef, 0)
 		ethPrice           float64
-		collectionsChan    = make(chan []opensea.OpenSeaCollection)
+		collectionsChan    = make(chan []opensea.OpenSeaCollectionCollection)
 		ethPriceChan       = make(chan float64)
 		resp               = GetInfoRespV2{}
 		totalETH           float64
@@ -88,7 +88,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	go h.asyncGetETHPrice(w, ethPriceChan)
 	ethPrice = <-ethPriceChan
 
-	var slugToOSCollectionMap = make(map[string]opensea.OpenSeaCollection)
+	var slugToOSCollectionMap = make(map[string]opensea.OpenSeaCollectionCollection)
 	for _, collection := range collections {
 		collectionSlugDocs = append(collectionSlugDocs, h.database.Collection("collections").Doc(collection.Slug))
 		slugToOSCollectionMap[collection.Slug] = collection
@@ -179,7 +179,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (h *Handler) getNFTsV2(collection opensea.OpenSeaCollection, assets []opensea.OpenSeaAsset) []NFT {
+func (h *Handler) getNFTsV2(collection opensea.OpenSeaCollectionCollection, assets []opensea.OpenSeaAsset) []NFT {
 	if len(collection.PrimaryAssetContracts) == 0 {
 		return []NFT{}
 	}
@@ -200,7 +200,7 @@ func (h *Handler) getNFTsV2(collection opensea.OpenSeaCollection, assets []opens
 	return result
 }
 
-func (h *Handler) addCollectionToDB(ctx context.Context, collection opensea.OpenSeaCollection, c CollectionV2) {
+func (h *Handler) addCollectionToDB(ctx context.Context, collection opensea.OpenSeaCollectionCollection, c CollectionV2) {
 	// Add collection to db
 	c.Updated = time.Now()
 

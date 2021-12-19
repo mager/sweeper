@@ -7,15 +7,17 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/mager/sweeper/opensea"
 )
 
 type GetCollectionResp struct {
-	Name            string    `json:"name"`
-	Slug            string    `json:"slug"`
-	Floor           float64   `json:"floor"`
-	WeeklyVolumeETH float64   `json:"weeklyVolumeETH"`
-	Updated         time.Time `json:"updated"`
-	Thumb           string    `json:"thumb"`
+	Name              string                    `json:"name"`
+	Slug              string                    `json:"slug"`
+	Floor             float64                   `json:"floor"`
+	WeeklyVolumeETH   float64                   `json:"weeklyVolumeETH"`
+	Updated           time.Time                 `json:"updated"`
+	Thumb             string                    `json:"thumb"`
+	OpenSeaCollection opensea.OpenSeaCollection `json:"opensea_collection"`
 }
 
 // getCollection is the route handler for the GET /collection/{slug} endpoint
@@ -24,8 +26,7 @@ func (h *Handler) getCollection(w http.ResponseWriter, r *http.Request) {
 		ctx        = context.TODO()
 		resp       = GetCollectionResp{}
 		collection = h.database.Collection("collections")
-		// Get slug from the URL
-		slug = mux.Vars(r)["slug"]
+		slug       = mux.Vars(r)["slug"]
 	)
 
 	// Fetch collection from database
@@ -53,6 +54,8 @@ func (h *Handler) getCollection(w http.ResponseWriter, r *http.Request) {
 
 	// Hydrate response with OpenSea content
 	resp.Thumb = openSeaCollection.Collection.ImageURL
+
+	resp.OpenSeaCollection = openSeaCollection.Collection
 
 	json.NewEncoder(w).Encode(resp)
 }
