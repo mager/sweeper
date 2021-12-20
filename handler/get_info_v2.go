@@ -11,12 +11,9 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
-	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
-
-	ens "github.com/wealdtech/go-ens/v3"
 )
 
 type CollectionV2 struct {
@@ -34,6 +31,7 @@ type CollectionResp struct {
 	Thumb    string    `json:"thumb"`
 	NumOwned int       `json:"numOwned"`
 	Updated  time.Time `json:"updated"`
+	NFTs     []NFT     `json:"nfts"`
 }
 
 // GetInfoRespV2 is the response for the GET /v2/info endpoint
@@ -42,6 +40,7 @@ type GetInfoRespV2 struct {
 	TotalETH    float64          `json:"totalETH"`
 	ETHPrice    float64          `json:"ethPrice"`
 	ENSName     string           `json:"ensName"`
+	Photo       string           `json:"photo"`
 }
 
 // getInfoV2 is the route handler for the GET /v2/info endpoint
@@ -69,14 +68,15 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		ctx         = context.TODO()
-		collections = make([]opensea.OpenSeaCollectionCollection, 0)
-		// nfts               = make([]opensea.OpenSeaAsset, 0)
-		// nftsChan           = make(chan []opensea.OpenSeaAsset)
+		ctx                = context.TODO()
+		collections        = make([]opensea.OpenSeaCollectionCollection, 0)
+		nfts               = make([]opensea.OpenSeaAsset, 0)
+		nftsChan           = make(chan []opensea.OpenSeaAsset)
 		collectionSlugDocs = make([]*firestore.DocumentRef, 0)
 		ethPrice           float64
 		collectionsChan    = make(chan []opensea.OpenSeaCollectionCollection)
 		ethPriceChan       = make(chan float64)
+		ensNameChan        = make(chan string)
 		resp               = GetInfoRespV2{}
 		totalETH           float64
 	)
@@ -85,12 +85,17 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	go h.asyncGetOpenSeaCollections(req.Address, w, collectionsChan)
 	collections = <-collectionsChan
 
-	// go h.asyncGetOpenSeaAssets(req.Address, w, nftsChan)
-	// nfts = <-nftsChan
+	go h.asyncGetOpenSeaAssets(req.Address, w, nftsChan)
+	nfts = <-nftsChan
+	resp.Photo = getPhoto(nfts)
 
 	// Get ETH price
-	go h.asyncGetETHPrice(w, ethPriceChan)
+	go h.asyncGetETHPrice(ethPriceChan)
 	ethPrice = <-ethPriceChan
+
+	// Get ENS Name
+	go h.asyncGetENSName(req.Address, ensNameChan)
+	resp.ENSName = <-ensNameChan
 
 	var slugToOSCollectionMap = make(map[string]opensea.OpenSeaCollectionCollection)
 	for _, collection := range collections {
@@ -119,6 +124,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 				Updated:  ds.Data()["updated"].(time.Time),
 				Thumb:    slugToOSCollectionMap[ds.Ref.ID].ImageURL,
 				NumOwned: numOwned,
+				NFTs:     h.getNFTsForCollection(ds.Ref.ID, nfts),
 			}
 			// This is for Firestore
 			docSnapMap[ds.Ref.ID] = CollectionV2{
@@ -180,9 +186,6 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 
 	resp.TotalETH = totalETH
 
-	// Get ENS Name
-	resp.ENSName = h.getENSName(req.Address)
-
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -233,12 +236,17 @@ func (h *Handler) getOpenSeaStats(docID string) opensea.OpenSeaCollectionStat {
 	return stat
 }
 
-func (h *Handler) getENSName(address string) string {
-	domain, err := ens.ReverseResolve(h.infuraClient, common.HexToAddress(address))
-	if err != nil {
-		h.logger.Error(err)
-		return ""
+func (h *Handler) getNFTsForCollection(slug string, nfts []opensea.OpenSeaAsset) []NFT {
+	var result []NFT
+	for _, nft := range nfts {
+		if nft.Collection.Slug == slug {
+			result = append(result, NFT{
+				Name:     nft.Name,
+				TokenID:  nft.TokenID,
+				ImageURL: nft.ImageThumbnailURL,
+				Traits:   getNFTTraits(nft),
+			})
+		}
 	}
-
-	return domain
+	return result
 }

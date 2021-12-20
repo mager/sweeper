@@ -9,9 +9,11 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
+	ens "github.com/wealdtech/go-ens/v3"
 )
 
 type BQInfoRequestRecord struct {
@@ -110,7 +112,7 @@ func (h *Handler) getInfo(w http.ResponseWriter, r *http.Request) {
 	nfts = <-nftsChan
 
 	// Get ETH price
-	go h.asyncGetETHPrice(w, ethPriceChan)
+	go h.asyncGetETHPrice(ethPriceChan)
 	ethPrice = <-ethPriceChan
 
 	// Fetch floor prices from stats endpoint
@@ -325,6 +327,7 @@ func (h *Handler) asyncGetOpenSeaCollections(address string, w http.ResponseWrit
 // asyncGetOpenSeaAssets gets the assets for the given address
 func (h *Handler) asyncGetOpenSeaAssets(address string, w http.ResponseWriter, rc chan []opensea.OpenSeaAsset) {
 	nfts, err := h.os.GetAllAssetsForAddress(address)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -334,6 +337,16 @@ func (h *Handler) asyncGetOpenSeaAssets(address string, w http.ResponseWriter, r
 }
 
 // asyncGetETHPrice gets the ETH price from the ETH price API
-func (h *Handler) asyncGetETHPrice(w http.ResponseWriter, rc chan float64) {
+func (h *Handler) asyncGetETHPrice(rc chan float64) {
 	rc <- h.cs.GetETHPrice()
+}
+
+func (h *Handler) asyncGetENSName(address string, rc chan string) {
+	domain, err := ens.ReverseResolve(h.infuraClient, common.HexToAddress(address))
+	if err != nil {
+		h.logger.Error(err)
+		rc <- ""
+	}
+
+	rc <- domain
 }
