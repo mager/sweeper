@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
@@ -26,6 +27,7 @@ func Register(
 	cs cs.CoinstatsClient,
 	s *gocron.Scheduler,
 	database *firestore.Client,
+	infuraClient *ethclient.Client,
 ) (
 	*zap.SugaredLogger,
 	*mux.Router,
@@ -34,6 +36,7 @@ func Register(
 	cs.CoinstatsClient,
 	config.Config,
 	*firestore.Client,
+	*ethclient.Client,
 ) {
 	var cfg config.Config
 	err := envconfig.Process("floorreport", &cfg)
@@ -66,5 +69,5 @@ func Register(
 		},
 	)
 
-	return logger, router, openSeaClient, bq, cs, cfg, database
+	return logger, router, openSeaClient, bq, cs, cfg, database, infuraClient
 }

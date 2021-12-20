@@ -7,6 +7,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	bq "github.com/mager/sweeper/bigquery"
@@ -15,6 +16,7 @@ import (
 	"github.com/mager/sweeper/cron"
 	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/handler"
+	"github.com/mager/sweeper/infura"
 	"github.com/mager/sweeper/logger"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/router"
@@ -32,6 +34,7 @@ func main() {
 			cs.Options,
 			cron.Options,
 			database.Options,
+			infura.Options,
 		),
 		fx.Invoke(Register),
 	).Run()
@@ -46,8 +49,9 @@ func Register(
 	cs cs.CoinstatsClient,
 	s *gocron.Scheduler,
 	database *firestore.Client,
+	infuraClient *ethclient.Client,
 ) {
-	logger, router, openSeaClient, bq, cs, cfg, database := common.Register(
+	logger, router, openSeaClient, bq, cs, cfg, database, infuraClient := common.Register(
 		lc,
 		logger,
 		router,
@@ -56,6 +60,7 @@ func Register(
 		cs,
 		s,
 		database,
+		infuraClient,
 	)
 
 	// Setup Discord Bot
@@ -66,7 +71,7 @@ func Register(
 	}
 
 	// Route handler
-	handler.New(logger, router, openSeaClient, bq, cs, cfg, database, dg)
+	handler.New(logger, router, openSeaClient, bq, cs, cfg, database, dg, infuraClient)
 
 	// Run cron tasks
 	cron.Initialize(logger, s, openSeaClient, database, bq, dg)

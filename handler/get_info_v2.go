@@ -11,9 +11,12 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
+	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
+
+	ens "github.com/wealdtech/go-ens/v3"
 )
 
 type CollectionV2 struct {
@@ -38,6 +41,7 @@ type GetInfoRespV2 struct {
 	Collections []CollectionResp `json:"collections"`
 	TotalETH    float64          `json:"totalETH"`
 	ETHPrice    float64          `json:"ethPrice"`
+	ENSName     string           `json:"ensName"`
 }
 
 // getInfoV2 is the route handler for the GET /v2/info endpoint
@@ -176,6 +180,9 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 
 	resp.TotalETH = totalETH
 
+	// Get ENS Name
+	resp.ENSName = h.getENSName(req.Address)
+
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -224,4 +231,14 @@ func (h *Handler) getOpenSeaStats(docID string) opensea.OpenSeaCollectionStat {
 		h.logger.Error(err)
 	}
 	return stat
+}
+
+func (h *Handler) getENSName(address string) string {
+	domain, err := ens.ReverseResolve(h.infuraClient, common.HexToAddress(address))
+	if err != nil {
+		h.logger.Error(err)
+		return ""
+	}
+
+	return domain
 }

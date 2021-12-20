@@ -4,6 +4,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/mux"
 	"github.com/mager/sweeper/coinstats"
 	"github.com/mager/sweeper/config"
@@ -13,14 +14,15 @@ import (
 
 // Handler struct for HTTP requests
 type Handler struct {
-	logger   *zap.SugaredLogger
-	router   *mux.Router
-	os       opensea.OpenSeaClient
-	bq       *bigquery.Client
-	cs       coinstats.CoinstatsClient
-	cfg      config.Config
-	database *firestore.Client
-	bot      *discordgo.Session
+	logger       *zap.SugaredLogger
+	router       *mux.Router
+	os           opensea.OpenSeaClient
+	bq           *bigquery.Client
+	cs           coinstats.CoinstatsClient
+	cfg          config.Config
+	database     *firestore.Client
+	bot          *discordgo.Session
+	infuraClient *ethclient.Client
 }
 
 // New creates a Handler struct
@@ -33,8 +35,9 @@ func New(
 	cfg config.Config,
 	database *firestore.Client,
 	bot *discordgo.Session,
+	infuraClient *ethclient.Client,
 ) *Handler {
-	h := Handler{logger, router, os, bq, cs, cfg, database, bot}
+	h := Handler{logger, router, os, bq, cs, cfg, database, bot, infuraClient}
 	h.registerRoutes()
 
 	return &h
