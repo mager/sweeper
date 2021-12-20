@@ -45,7 +45,7 @@ func New(
 
 // RegisterRoutes registers all the routes for the route handler
 func (h *Handler) registerRoutes() {
-	h.router.HandleFunc("/info", h.getInfo).Methods("POST")
+	h.router.HandleFunc("/info", h.getInfoV2).Methods("POST")
 	h.router.HandleFunc("/v2/info", h.getInfoV2).Methods("POST")
 
 	h.router.HandleFunc("/stats", h.getStats).Methods("GET")
