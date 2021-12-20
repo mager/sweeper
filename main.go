@@ -10,7 +10,6 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	bq "github.com/mager/sweeper/bigquery"
-	"github.com/mager/sweeper/bot"
 	cs "github.com/mager/sweeper/coinstats"
 	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/cron"
@@ -72,6 +71,6 @@ func Register(
 	// Run cron tasks
 	cron.Initialize(logger, s, openSeaClient, database, bq, dg)
 
-	// Discord bot
-	bot.New(dg, logger, database, openSeaClient)
+	// // Discord bot
+	// bot.New(dg, logger, database, openSeaClient)
 }
