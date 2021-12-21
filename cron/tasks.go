@@ -24,13 +24,6 @@ type Tasks struct {
 	bot      *discordgo.Session
 }
 
-type BQCollectionsUpdateRecord struct {
-	Slug           string
-	Floor          float64
-	SevenDayVolume float64
-	RequestTime    time.Time
-}
-
 func Initialize(
 	logger *zap.SugaredLogger,
 	s *gocron.Scheduler,
@@ -74,33 +67,6 @@ func Initialize(
 	return &t
 }
 
-// recordCollectionsUpdateInBigQuery posts a info request event to BigQuery
-func (h *Tasks) recordCollectionsUpdateInBigQuery(
-	slug string,
-	floor float64,
-	sevenDayVol float64,
-	t time.Time,
-) {
-	var (
-		ctx     = context.Background()
-		dataset = h.bq.DatasetInProject("floor-report-327113", "collections")
-		table   = dataset.Table("update")
-		u       = table.Inserter()
-
-		items = []*BQCollectionsUpdateRecord{
-			{
-				Slug:           slug,
-				Floor:          floor,
-				SevenDayVolume: sevenDayVol,
-				RequestTime:    t,
-			},
-		}
-	)
-	if err := u.Put(ctx, items); err != nil {
-		h.logger.Error(err)
-	}
-}
-
 // updateNewCollections updates collections that were just added
 func (t *Tasks) updateNewCollections(ctx context.Context) {
 	t.logger.Info("Updating new collections")
@@ -128,7 +94,7 @@ func (t *Tasks) updateNewCollections(ctx context.Context) {
 		}
 
 		// Update the floor price
-		t.os.UpdateCollectionStats(ctx, t.logger, doc)
+		t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
 		count++
 		slugs = append(slugs, doc.Ref.ID)
 
@@ -174,7 +140,7 @@ func (t *Tasks) updateTierACollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) > 0.5 {
-			t.os.UpdateCollectionStats(ctx, t.logger, doc)
+			t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
 
 			count++
 			slugs = append(slugs, doc.Ref.ID)
@@ -221,7 +187,7 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) < 0.6 {
-			t.os.UpdateCollectionStats(ctx, t.logger, doc)
+			t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
 
 			count++
 			slugs = append(slugs, doc.Ref.ID)
@@ -274,7 +240,7 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 		}
 
 		// Update the floor price
-		t.os.UpdateCollectionStats(ctx, t.logger, doc)
+		t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
 		count++
 
 	}

@@ -14,17 +14,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/ethereum/go-ethereum/common"
+	"github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 	ens "github.com/wealdtech/go-ens/v3"
 )
-
-type BQInfoRequestRecord struct {
-	Address       string
-	NumNFTs       int
-	UnrealizedBag float64
-	RequestTime   time.Time
-}
 
 type NFT struct {
 	Name     string     `json:"name"`
@@ -235,7 +229,11 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if !req.SkipBQ {
-		h.recordRequestInBigQuery(address)
+		bigquery.RecordRequestInBigQuery(
+			h.bq.DatasetInProject("floor-report-327113", "info"),
+			h.logger,
+			address,
+		)
 	}
 
 	sort.Slice(resp.Collections[:], func(i, j int) bool {
@@ -418,31 +416,4 @@ func (h *Handler) GetAddressFromENSName(ensName string) string {
 	}
 
 	return address.Hex()
-}
-
-// recordRequestInBigQuery posts a info request event to BigQuery
-func (h *Handler) recordRequestInBigQuery(
-	address string,
-	// numNFTs int,
-	// adaptedCollections []Collection,
-	// unrealizedBag float64,
-) {
-	var (
-		ctx     = context.Background()
-		dataset = h.bq.DatasetInProject("floor-report-327113", "info")
-		table   = dataset.Table("requests")
-		u       = table.Inserter()
-
-		items = []*BQInfoRequestRecord{
-			{
-				Address: address,
-				// NumNFTs:       numNFTs,
-				// UnrealizedBag: unrealizedBag,
-				RequestTime: time.Now(),
-			},
-		}
-	)
-	if err := u.Put(ctx, items); err != nil {
-		h.logger.Error(err)
-	}
 }

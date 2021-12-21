@@ -9,8 +9,10 @@ import (
 	"net/url"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/kelseyhightower/envconfig"
+	bq "github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/config"
 	"go.uber.org/zap"
 )
@@ -338,6 +340,7 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 
 func (o *OpenSeaClient) UpdateCollectionStats(
 	ctx context.Context,
+	bigqueryClient *bigquery.Client,
 	logger *zap.SugaredLogger,
 	doc *firestore.DocumentSnapshot,
 ) float64 {
@@ -361,6 +364,15 @@ func (o *OpenSeaClient) UpdateCollectionStats(
 		{Path: "7d", Value: sevenDayVol},
 		{Path: "updated", Value: now},
 	})
+
+	bq.RecordCollectionsUpdateInBigQuery(
+		bigqueryClient,
+		logger,
+		docID,
+		floor,
+		sevenDayVol,
+		now,
+	)
 
 	return floor
 }
