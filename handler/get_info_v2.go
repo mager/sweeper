@@ -16,6 +16,7 @@ import (
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 	ens "github.com/wealdtech/go-ens/v3"
+	"go.uber.org/zap"
 )
 
 type NFT struct {
@@ -190,13 +191,13 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var slugsToAdd = make([]string, 0)
 	for _, collection := range collections {
 		// Check docSnapMap to see if collection slug is in there
 		if _, ok := docSnapMap[collection.Slug]; ok {
 			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
 		} else {
 			// Otherwise, add it to the database with floor -1
+			h.logger.Info("Adding collection to databaseeeee", zap.String("collection", collection.Slug))
 			var c = CollectionV2{
 				Name:    collection.Name,
 				Slug:    collection.Slug,
@@ -204,9 +205,6 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 				Updated: time.Now(),
 			}
 			go h.addCollectionToDB(h.ctx, collection, c)
-			// TODO: Save to BQ
-			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
-			slugsToAdd = append(slugsToAdd, collection.Slug)
 		}
 	}
 
