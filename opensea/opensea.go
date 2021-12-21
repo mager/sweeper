@@ -325,12 +325,8 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	}
 	defer resp.Body.Close()
 
-	// bodyBytes, err := io.ReadAll(resp.Body)
-	// bodyString := string(bodyBytes)
-	// pretty.Print(bodyString)
 	err = json.NewDecoder(resp.Body).Decode(&collection)
 	if err != nil {
-		log.Println("FOOO")
 		log.Fatal(err)
 		return collection, nil
 	}
