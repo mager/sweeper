@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	bq "github.com/mager/sweeper/bigquery"
+	"github.com/mager/sweeper/bot"
 	cs "github.com/mager/sweeper/coinstats"
 	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/cron"
@@ -51,6 +53,7 @@ func Register(
 	database *firestore.Client,
 	infuraClient *ethclient.Client,
 ) {
+	var ctx = context.Background()
 	logger, router, openSeaClient, bq, cs, cfg, database, infuraClient := common.Register(
 		lc,
 		logger,
@@ -71,11 +74,11 @@ func Register(
 	}
 
 	// Route handler
-	handler.New(logger, router, openSeaClient, bq, cs, cfg, database, dg, infuraClient)
+	handler.New(ctx, logger, router, openSeaClient, bq, cs, cfg, database, dg, infuraClient)
 
 	// Run cron tasks
-	cron.Initialize(logger, s, openSeaClient, database, bq, dg)
+	cron.Initialize(ctx, logger, s, openSeaClient, database, bq, dg)
 
-	// // Discord bot
-	// bot.New(dg, logger, database, openSeaClient)
+	// Discord bot
+	bot.New(ctx, dg, logger, database, openSeaClient)
 }

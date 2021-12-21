@@ -7,11 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"github.com/bwmarrin/discordgo"
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/mager/sweeper/bigquery"
@@ -122,17 +120,17 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		ctx                = context.TODO()
 		collections        = make([]opensea.OpenSeaCollectionCollection, 0)
 		nfts               = make([]opensea.OpenSeaAsset, 0)
-		nftsChan           = make(chan []opensea.OpenSeaAsset)
 		collectionSlugDocs = make([]*firestore.DocumentRef, 0)
-		ethPrice           float64
-		collectionsChan    = make(chan []opensea.OpenSeaCollectionCollection)
-		ethPriceChan       = make(chan float64)
-		ensNameChan        = make(chan string)
 		resp               = GetInfoRespV2{}
+		ethPrice           float64
 		totalETH           float64
+
+		nftsChan        = make(chan []opensea.OpenSeaAsset)
+		collectionsChan = make(chan []opensea.OpenSeaCollectionCollection)
+		ethPriceChan    = make(chan float64)
+		ensNameChan     = make(chan string)
 	)
 
 	// Fetch the user's collections & NFTs from OpenSea
@@ -158,7 +156,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user's collections are in our database
-	docsnaps, err := h.database.GetAll(ctx, collectionSlugDocs)
+	docsnaps, err := h.database.GetAll(h.ctx, collectionSlugDocs)
 	if err != nil {
 		h.logger.Error(err)
 		return
@@ -205,28 +203,12 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 				Floor:   -1,
 				Updated: time.Now(),
 			}
-			go h.addCollectionToDB(ctx, collection, c)
+			go h.addCollectionToDB(h.ctx, collection, c)
 			// TODO: Save to BQ
 			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
 			slugsToAdd = append(slugsToAdd, collection.Slug)
 		}
 	}
-
-	// Post to Discord
-	h.bot.ChannelMessageSendEmbed(
-		"920371422457659482",
-		&discordgo.MessageEmbed{
-			Title:       fmt.Sprintf("Added %d new Collections", len(slugsToAdd)),
-			Description: fmt.Sprintf("Wallet %s joined the party", address),
-			Fields: []*discordgo.MessageEmbedField{
-				{
-					Name:   "Slugs",
-					Value:  strings.Join(slugsToAdd, ", "),
-					Inline: true,
-				},
-			},
-		},
-	)
 
 	if !req.SkipBQ {
 		bigquery.RecordRequestInBigQuery(
@@ -247,21 +229,26 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (h *Handler) addCollectionToDB(ctx context.Context, collection opensea.OpenSeaCollectionCollection, c CollectionV2) {
+func (h *Handler) addCollectionToDB(
+	ctx context.Context,
+	collection opensea.OpenSeaCollectionCollection,
+	c CollectionV2,
+) {
 	// Add collection to db
 	c.Updated = time.Now()
 
 	// Get stats
 	stat := h.getOpenSeaStats(collection.Slug)
-	c.Floor = stat.FloorPrice
-	c.SevenDayVolume = stat.SevenDayVolume
-	_, err := h.database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
-	if err != nil {
-		h.logger.Error(err)
-		return
+	if stat.FloorPrice >= 0.01 {
+		c.Floor = stat.FloorPrice
+		c.SevenDayVolume = stat.SevenDayVolume
+		_, err := h.database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
+		if err != nil {
+			h.logger.Error(err)
+			return
+		}
+		h.logger.Infof("Added collection %s to db", collection.Slug)
 	}
-
-	h.logger.Infof("Added collection %s to db", collection.Slug)
 }
 
 // getOpenSeaStats gets the floor price from collections on OpenSea

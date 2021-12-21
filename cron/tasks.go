@@ -25,6 +25,7 @@ type Tasks struct {
 }
 
 func Initialize(
+	ctx context.Context,
 	logger *zap.SugaredLogger,
 	s *gocron.Scheduler,
 	os opensea.OpenSeaClient,
@@ -34,8 +35,6 @@ func Initialize(
 ) *Tasks {
 	logger.Info("Starting cron")
 	var (
-		ctx = context.TODO()
-
 		t = Tasks{
 			logger:   logger,
 			s:        s,
@@ -46,8 +45,9 @@ func Initialize(
 		}
 	)
 
-	// DEBUG: Custom query
+	// DEBUG: Custom queries
 	// t.updateCollectionsWithCustomQuery(ctx)
+	// t.deleteCollectionsWithCustomQuery(ctx)
 
 	s.Every(4).Hours().Do(func() {
 		// Update new collections
@@ -250,6 +250,49 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 		"920371422457659482",
 		&discordgo.MessageEmbed{
 			Title:       fmt.Sprintf("Updated %d Collections", count),
+			Description: fmt.Sprintf("Custom query: %s", q),
+		},
+	)
+}
+
+// deleteCollectionsWithCustomQuery updates collections that were just added
+func (t *Tasks) deleteCollectionsWithCustomQuery(ctx context.Context) {
+	t.logger.Info("Updating collections with custom query")
+
+	// Fetch all collections where floor is < 0.01
+	// These were recently added to the database from a new user connecting
+	// their wallet
+	var (
+		q           = "Below 0.01 floor"
+		collections = t.database.Collection("collections").Where("floor", "<", 0.01)
+		iter        = collections.Documents(ctx)
+		count       = 0
+	)
+	defer iter.Stop()
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// TODO: Handle error.
+			t.logger.Error(err)
+		}
+
+		// Update the floor price
+		// TODO: Uncomment
+		// doc.Ref.Delete(ctx)
+		t.logger.Info("Deleted collection: https://opensea.io/collection/", doc.Ref.ID, " :", doc.Data()["floor"].(float64))
+		count++
+
+	}
+
+	// Post to Discord
+	t.bot.ChannelMessageSendEmbed(
+		"920371422457659482",
+		&discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Deleted %d collections", count),
 			Description: fmt.Sprintf("Custom query: %s", q),
 		},
 	)

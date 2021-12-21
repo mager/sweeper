@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
@@ -14,6 +16,7 @@ import (
 
 // Handler struct for HTTP requests
 type Handler struct {
+	ctx          context.Context
 	logger       *zap.SugaredLogger
 	router       *mux.Router
 	os           opensea.OpenSeaClient
@@ -27,6 +30,7 @@ type Handler struct {
 
 // New creates a Handler struct
 func New(
+	ctx context.Context,
 	logger *zap.SugaredLogger,
 	router *mux.Router,
 	os opensea.OpenSeaClient,
@@ -37,7 +41,7 @@ func New(
 	bot *discordgo.Session,
 	infuraClient *ethclient.Client,
 ) *Handler {
-	h := Handler{logger, router, os, bq, cs, cfg, database, bot, infuraClient}
+	h := Handler{ctx, logger, router, os, bq, cs, cfg, database, bot, infuraClient}
 	h.registerRoutes()
 
 	return &h

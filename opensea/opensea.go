@@ -353,22 +353,24 @@ func (o *OpenSeaClient) UpdateCollectionStats(
 		now         = time.Now()
 	)
 
-	logger.Infof("Updating floor price to %v for %s", floor, docID)
+	if floor >= 0.01 {
+		logger.Infof("Updating floor price to %v for %s", floor, docID)
 
-	doc.Ref.Update(ctx, []firestore.Update{
-		{Path: "floor", Value: floor},
-		{Path: "7d", Value: sevenDayVol},
-		{Path: "updated", Value: now},
-	})
+		doc.Ref.Update(ctx, []firestore.Update{
+			{Path: "floor", Value: floor},
+			{Path: "7d", Value: sevenDayVol},
+			{Path: "updated", Value: now},
+		})
 
-	bq.RecordCollectionsUpdateInBigQuery(
-		bigqueryClient,
-		logger,
-		docID,
-		floor,
-		sevenDayVol,
-		now,
-	)
+		bq.RecordCollectionsUpdateInBigQuery(
+			bigqueryClient,
+			logger,
+			docID,
+			floor,
+			sevenDayVol,
+			now,
+		)
+	}
 
 	return floor
 }

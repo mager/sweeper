@@ -15,14 +15,15 @@ import (
 )
 
 func New(
+	ctx context.Context,
 	dg *discordgo.Session,
 	logger *zap.SugaredLogger,
 	database *firestore.Client,
 	openSeaClient opensea.OpenSeaClient,
 ) {
+	logger.Info("Registering Discord bot")
 	var (
 		err error
-		ctx = context.TODO()
 	)
 
 	// Register the messageCreate func as a callback for MessageCreate events.
@@ -53,7 +54,6 @@ func messageCreate(ctx context.Context, logger *zap.SugaredLogger, database *fir
 
 		// floor command
 		fCommand(ctx, logger, database, s, m)
-		// uCommand(ctx, logger, database, openSeaClient, s, m)
 	}
 }
 
@@ -73,6 +73,11 @@ func fCommand(
 		if i == 0 {
 			// The slug is everything after `f `
 			var slug = match[2:]
+
+			if slug == "help" {
+				s.ChannelMessageSend(m.ChannelID, "`f <OpenSea slug>`: returns the floor for a collection (example: `f waveblocks`)")
+				return
+			}
 
 			// Fetch the record from database
 			docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
@@ -95,34 +100,3 @@ func fCommand(
 		}
 	}
 }
-
-// uCommand is a command that updates the floor for a collection
-// func uCommand(
-// 	ctx context.Context,
-// 	logger *zap.SugaredLogger,
-// 	database *firestore.Client,
-// 	openSeaClient opensea.OpenSeaClient,
-// 	s *discordgo.Session,
-// 	m *discordgo.MessageCreate) {
-// 	var (
-// 		re = regexp.MustCompile(`^(?m)u (.*)`)
-// 	)
-
-// 	for i, match := range re.FindAllString(m.Content, -1) {
-// 		if i == 0 {
-// 			// The slug is everything after `u `
-// 			var slug = match[2:]
-
-// 			// Fetch the record from database
-// 			docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
-// 			if err != nil {
-// 				logger.Errorw("Error fetching document", "error", err)
-// 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error fetching floor for %s", slug))
-// 				return
-// 			}
-
-// 			floor := openSeaClient.UpdateCollectionStats(ctx, logger, docsnap)
-// 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("The floor price for %s was updated to: %.2f", slug, floor))
-// 		}
-// 	}
-// }
