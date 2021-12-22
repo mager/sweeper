@@ -94,27 +94,34 @@ func (t *Tasks) updateNewCollections(ctx context.Context) {
 		}
 
 		// Update the floor price
-		t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
-		count++
-		slugs = append(slugs, doc.Ref.ID)
+		_, updated := t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+
+		if updated {
+			count++
+			slugs = append(slugs, doc.Ref.ID)
+		}
 
 	}
 
 	// Post to Discord
-	t.bot.ChannelMessageSendEmbed(
-		"920371422457659482",
-		&discordgo.MessageEmbed{
-			Title:       fmt.Sprintf("Updated %d New Collections", count),
-			Description: "Collections added in the last 4 hours",
-			Fields: []*discordgo.MessageEmbedField{
-				{
-					Name:   "Slugs",
-					Value:  strings.Join(slugs, ", "),
-					Inline: true,
+	if count > 0 {
+		t.bot.ChannelMessageSendEmbed(
+			"920371422457659482",
+			&discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("Updated %d New Collections", count),
+				Description: "Collections added in the last 4 hours",
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:   "Slugs",
+						Value:  strings.Join(slugs, ", "),
+						Inline: true,
+					},
 				},
 			},
-		},
-	)
+		)
+	}
+
+	t.logger.Infof("Updated %d new collections", count)
 }
 
 // updateTierACollections updates the database if their 7 day volume is over 0.5 ETH
@@ -140,28 +147,34 @@ func (t *Tasks) updateTierACollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) > 0.5 {
-			t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+			_, updated := t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
 
-			count++
-			slugs = append(slugs, doc.Ref.ID)
+			if updated {
+				count++
+				slugs = append(slugs, doc.Ref.ID)
+			}
 		}
 	}
 
 	// Post to Discord
-	t.bot.ChannelMessageSendEmbed(
-		"920371422457659482",
-		&discordgo.MessageEmbed{
-			Title:       fmt.Sprintf("Updated %d Tier A Collections", count),
-			Description: "7 day volume is over 0.5 ETH",
-			Fields: []*discordgo.MessageEmbedField{
-				{
-					Name:   "Slugs",
-					Value:  strings.Join(slugs, ", "),
-					Inline: true,
+	if count > 0 {
+		t.bot.ChannelMessageSendEmbed(
+			"920371422457659482",
+			&discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("Updated %d Tier A Collections", count),
+				Description: "7 day volume is over 0.5 ETH",
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:   "Slugs",
+						Value:  strings.Join(slugs, ", "),
+						Inline: true,
+					},
 				},
 			},
-		},
-	)
+		)
+	}
+
+	t.logger.Infof("Updated %d Tier A collections", count)
 }
 
 // updateTierBCollections updates the database if their 7 day volume is ender 0.6 ETH
@@ -187,28 +200,34 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) < 0.6 {
-			t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+			_, updated := t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
 
-			count++
-			slugs = append(slugs, doc.Ref.ID)
+			if updated {
+				count++
+				slugs = append(slugs, doc.Ref.ID)
+			}
 		}
 	}
 
 	// Post to Discord
-	t.bot.ChannelMessageSendEmbed(
-		"920371422457659482",
-		&discordgo.MessageEmbed{
-			Title:       fmt.Sprintf("Updated %d Tier B Collections", count),
-			Description: "7 day volume is under 0.6 ETH",
-			Fields: []*discordgo.MessageEmbedField{
-				{
-					Name:   "Slugs",
-					Value:  strings.Join(slugs, ", "),
-					Inline: true,
+	if count > 0 {
+		t.bot.ChannelMessageSendEmbed(
+			"920371422457659482",
+			&discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("Updated %d Tier B Collections", count),
+				Description: "7 day volume is under 0.6 ETH",
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:   "Slugs",
+						Value:  strings.Join(slugs, ", "),
+						Inline: true,
+					},
 				},
 			},
-		},
-	)
+		)
+	}
+
+	t.logger.Infof("Updated %d Tier B collections", count)
 }
 
 // updateCollectionsWithCustomQuery updates collections that were just added

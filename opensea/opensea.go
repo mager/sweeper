@@ -339,7 +339,7 @@ func (o *OpenSeaClient) UpdateCollectionStats(
 	bigqueryClient *bigquery.Client,
 	logger *zap.SugaredLogger,
 	doc *firestore.DocumentSnapshot,
-) float64 {
+) (float64, bool) {
 	var docID = doc.Ref.ID
 
 	stats, err := o.GetCollectionStatsForSlug(docID)
@@ -351,6 +351,7 @@ func (o *OpenSeaClient) UpdateCollectionStats(
 		floor       = stats.FloorPrice
 		sevenDayVol = stats.SevenDayVolume
 		now         = time.Now()
+		updated     bool
 	)
 
 	if floor >= 0.01 {
@@ -370,7 +371,9 @@ func (o *OpenSeaClient) UpdateCollectionStats(
 			sevenDayVol,
 			now,
 		)
+
+		updated = true
 	}
 
-	return floor
+	return floor, updated
 }
