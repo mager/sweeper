@@ -12,6 +12,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/gorilla/mux"
 	bq "github.com/mager/sweeper/bigquery"
+	"github.com/mager/sweeper/bot"
 	cs "github.com/mager/sweeper/coinstats"
 	"github.com/mager/sweeper/common"
 	"github.com/mager/sweeper/cron"
@@ -79,5 +80,7 @@ func Register(
 	cron.Initialize(ctx, logger, s, openSeaClient, database, bq, dg)
 
 	// Discord bot
-	// bot.New(ctx, dg, logger, database, openSeaClient)
+	// TODO: https://github.com/mager/sweeper/issues/8
+	// TODO: Set concurrency back to default after moving this out
+	bot.New(ctx, dg, logger, database, openSeaClient)
 }
