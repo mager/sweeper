@@ -29,7 +29,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// Fetch collections with the highest floor price
-	highestFloorIter := collections.OrderBy("floor", firestore.Desc).Limit(20).Documents(ctx)
+	highestFloorIter := collections.Where("floor", "<", 10000).OrderBy("floor", firestore.Desc).Limit(20).Documents(ctx)
 	for {
 		doc, err := highestFloorIter.Next()
 		if err == iterator.Done {
@@ -48,7 +48,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch collections with the highest 7d weekly volume
-	highestWeeklyVolumeIter := collections.OrderBy("7d", firestore.Desc).Limit(10).Documents(ctx)
+	highestWeeklyVolumeIter := collections.OrderBy("7d", firestore.Desc).Limit(20).Documents(ctx)
 	for {
 		doc, err := highestWeeklyVolumeIter.Next()
 		if err == iterator.Done {
