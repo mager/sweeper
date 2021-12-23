@@ -10,8 +10,8 @@ import (
 )
 
 type GetTrendingResp struct {
-	TopHighestFloor []TrendingCollection `json:"top_highest_floor"`
-	TopWeeklyVolume []TrendingCollection `json:"top_weekly_volume"`
+	TopHighestFloor []TrendingCollection `json:"topHighestFloor"`
+	TopWeeklyVolume []TrendingCollection `json:"topWeeklyVolume"`
 }
 
 type TrendingCollection struct {
@@ -29,7 +29,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// Fetch collections with the highest floor price
-	highestFloorIter := collections.OrderBy("floor", firestore.Desc).Limit(10).Documents(ctx)
+	highestFloorIter := collections.OrderBy("floor", firestore.Desc).Limit(20).Documents(ctx)
 	for {
 		doc, err := highestFloorIter.Next()
 		if err == iterator.Done {

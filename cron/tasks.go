@@ -10,6 +10,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron"
+	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/opensea"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
@@ -94,7 +95,7 @@ func (t *Tasks) updateNewCollections(ctx context.Context) {
 		}
 
 		// Update the floor price
-		_, updated := t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+		_, updated := database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
 
 		if updated {
 			count++
@@ -147,7 +148,7 @@ func (t *Tasks) updateTierACollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) > 0.5 {
-			_, updated := t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+			_, updated := database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
 
 			if updated {
 				count++
@@ -200,7 +201,7 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) < 0.6 {
-			_, updated := t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+			_, updated := database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
 
 			if updated {
 				count++
@@ -259,7 +260,7 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 		}
 
 		// Update the floor price
-		t.os.UpdateCollectionStats(ctx, t.bq, t.logger, doc)
+		database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
 		count++
 
 	}
