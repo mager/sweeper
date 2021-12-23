@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"cloud.google.com/go/firestore"
+	"github.com/mager/sweeper/utils"
 	"google.golang.org/api/iterator"
 )
 
@@ -62,7 +63,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 			Rank:  len(resp.TopWeeklyVolume) + 1,
 			Name:  doc.Data()["name"].(string),
 			Slug:  doc.Data()["slug"].(string),
-			Value: doc.Data()["7d"].(float64),
+			Value: utils.RoundFloat(doc.Data()["7d"].(float64), 2),
 		})
 	}
 
