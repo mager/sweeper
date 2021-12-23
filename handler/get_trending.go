@@ -19,6 +19,7 @@ type TrendingCollection struct {
 	Rank  int     `json:"rank"`
 	Name  string  `json:"name"`
 	Slug  string  `json:"slug"`
+	Thumb string  `json:"thumb"`
 	Value float64 `json:"value"`
 }
 
@@ -30,7 +31,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// Fetch collections with the highest floor price
-	highestFloorIter := collections.Where("floor", "<", 10000).OrderBy("floor", firestore.Desc).Limit(20).Documents(ctx)
+	highestFloorIter := collections.Where("floor", "<", 1000).OrderBy("floor", firestore.Desc).Limit(20).Documents(ctx)
 	for {
 		doc, err := highestFloorIter.Next()
 		if err == iterator.Done {
@@ -44,6 +45,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 			Rank:  len(resp.TopHighestFloor) + 1,
 			Name:  doc.Data()["name"].(string),
 			Slug:  doc.Data()["slug"].(string),
+			Thumb: doc.Data()["thumb"].(string),
 			Value: doc.Data()["floor"].(float64),
 		})
 	}
@@ -63,6 +65,7 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 			Rank:  len(resp.TopWeeklyVolume) + 1,
 			Name:  doc.Data()["name"].(string),
 			Slug:  doc.Data()["slug"].(string),
+			Thumb: doc.Data()["thumb"].(string),
 			Value: utils.RoundFloat(doc.Data()["7d"].(float64), 2),
 		})
 	}

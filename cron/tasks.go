@@ -95,7 +95,13 @@ func (t *Tasks) updateNewCollections(ctx context.Context) {
 		}
 
 		// Update the floor price
-		_, updated := database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
+		_, updated := database.UpdateCollectionStats(
+			ctx,
+			&t.os,
+			t.bq,
+			t.logger,
+			doc,
+		)
 
 		if updated {
 			count++
@@ -148,7 +154,13 @@ func (t *Tasks) updateTierACollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) > 0.5 {
-			_, updated := database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
+			_, updated := database.UpdateCollectionStats(
+				ctx,
+				&t.os,
+				t.bq,
+				t.logger,
+				doc,
+			)
 
 			if updated {
 				count++
@@ -201,7 +213,13 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 		}
 
 		if doc.Data()["7d"].(float64) < 0.6 {
-			_, updated := database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
+			_, updated := database.UpdateCollectionStats(
+				ctx,
+				&t.os,
+				t.bq,
+				t.logger,
+				doc,
+			)
 
 			if updated {
 				count++
@@ -235,15 +253,13 @@ func (t *Tasks) updateTierBCollections(ctx context.Context) {
 func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 	t.logger.Info("Updating collections with custom query")
 
-	// Fetch all collections where floor is -1
-	// These were recently added to the database from a new user connecting
-	// their wallet
 	var (
-		q           = "Updated in the last 2 hours"
-		twoHoursAgo = time.Now().Add(-2 * time.Hour)
+		q = "Missing thumbnail"
+		// twoHoursAgo = time.Now().Add(-2 * time.Hour)
 
-		collections = t.database.Collection("collections").Where("updated", "<", twoHoursAgo)
+		collections = t.database.Collection("collections")
 		iter        = collections.Documents(ctx)
+		docs        = make([]*firestore.DocumentSnapshot, 0)
 		count       = 0
 	)
 
@@ -259,10 +275,23 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 			t.logger.Error(err)
 		}
 
-		// Update the floor price
-		database.UpdateCollectionStats(ctx, &t.os, t.bq, t.logger, doc)
+		docs = append(docs, doc)
 		count++
+	}
 
+	// Fetch only docs where thumb is not present on the object
+	for _, doc := range docs {
+		if doc.Data()["thumb"] == nil {
+			// Update the floor price
+			database.UpdateCollectionStats(
+				ctx,
+				&t.os,
+				t.bq,
+				t.logger,
+				doc,
+			)
+			time.Sleep(time.Millisecond * 500)
+		}
 	}
 
 	// Post to Discord

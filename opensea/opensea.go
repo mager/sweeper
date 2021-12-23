@@ -309,16 +309,28 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
+		log.Printf("Error creating request: %s", slug)
 		log.Fatal(err)
 		return collection, nil
 	}
 
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
+		log.Printf("Error doing request: %s", slug)
 		log.Fatal(err)
 		return collection, nil
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		log.Printf("Collection not found: %s", slug)
+		// TODO: Delete Collection from Firestore
+		return collection, nil
+	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		log.Println("Too many requests, please try again later")
+		return collection, nil
+	}
 
 	err = json.NewDecoder(resp.Body).Decode(&collection)
 	if err != nil {

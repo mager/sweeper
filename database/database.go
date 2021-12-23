@@ -12,6 +12,15 @@ import (
 	"go.uber.org/zap"
 )
 
+type CollectionV2 struct {
+	Name           string    `firestore:"name" json:"name"`
+	Thumb          string    `firestore:"thumb" json:"thumb"`
+	Floor          float64   `firestore:"floor" json:"floor"`
+	Slug           string    `firestore:"slug" json:"slug"`
+	SevenDayVolume float64   `firestore:"7d" json:"7d"`
+	Updated        time.Time `firestore:"updated" json:"updated"`
+}
+
 // ProvideDB provides a firestore client
 func ProvideDB() *firestore.Client {
 	projectID := "floor-report-327113"
@@ -34,26 +43,33 @@ func UpdateCollectionStats(
 ) (float64, bool) {
 	var docID = doc.Ref.ID
 
-	stats, err := openSeaClient.GetCollectionStatsForSlug(docID)
+	// Fetch collection from OpenSea
+	collection, err := openSeaClient.GetCollection(docID)
 	if err != nil {
 		logger.Error(err)
 	}
 
 	var (
+		stats       = collection.Collection.Stats
 		floor       = stats.FloorPrice
 		sevenDayVol = stats.SevenDayVolume
 		now         = time.Now()
 		updated     bool
 	)
 
-	if floor >= 0.01 {
+	if collection.Collection.Slug != "" && floor >= 0.01 {
 		logger.Infof("Updating floor price to %v for %s", floor, docID)
 
-		doc.Ref.Update(ctx, []firestore.Update{
+		// Update collection
+		_, err := doc.Ref.Update(ctx, []firestore.Update{
 			{Path: "floor", Value: floor},
 			{Path: "7d", Value: sevenDayVol},
+			{Path: "thumb", Value: collection.Collection.ImageURL},
 			{Path: "updated", Value: now},
 		})
+		if err != nil {
+			logger.Error(err)
+		}
 
 		bq.RecordCollectionsUpdateInBigQuery(
 			bigQueryClient,
@@ -65,7 +81,38 @@ func UpdateCollectionStats(
 		)
 
 		updated = true
+	} else {
+		logger.Info("Floor too low for ", docID)
 	}
 
 	return floor, updated
+}
+
+func AddCollectionToDB(
+	ctx context.Context,
+	openSeaClient *opensea.OpenSeaClient,
+	logger *zap.SugaredLogger,
+	database *firestore.Client,
+	collection opensea.OpenSeaCollectionCollection,
+	c CollectionV2,
+) {
+	// Add collection to db
+	c.Updated = time.Now()
+
+	// Get stats
+	stat, err := openSeaClient.GetCollectionStatsForSlug(collection.Slug)
+	if err != nil {
+		logger.Error(err)
+	}
+	if stat.FloorPrice >= 0.01 {
+		c.Floor = stat.FloorPrice
+		c.SevenDayVolume = stat.SevenDayVolume
+		c.Thumb = collection.ImageURL
+		_, err := database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		logger.Infof("Added collection %s to db", collection.Slug)
+	}
 }

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,8 +10,8 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/ethereum/go-ethereum/common"
-	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/mager/sweeper/bigquery"
+	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 	ens "github.com/wealdtech/go-ens/v3"
@@ -63,14 +62,6 @@ type GetInfoResp struct {
 	Photo            string       `json:"photo"`
 }
 
-type CollectionV2 struct {
-	Name           string    `firestore:"name" json:"name"`
-	Floor          float64   `firestore:"floor" json:"floor"`
-	Slug           string    `firestore:"slug" json:"slug"`
-	SevenDayVolume float64   `firestore:"7d" json:"7d"`
-	Updated        time.Time `firestore:"updated" json:"updated"`
-}
-
 type CollectionResp struct {
 	Name     string    `json:"name"`
 	Floor    float64   `json:"floor"`
@@ -110,7 +101,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate address
-	if !eth.IsHexAddress(address) {
+	if !common.IsHexAddress(address) {
 		// Fetch address from ENS if it's not a valid address
 		address = h.GetAddressFromENSName(req.Address)
 		if address == "" {
@@ -162,7 +153,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var docSnapMap = make(map[string]CollectionV2)
+	var docSnapMap = make(map[string]database.CollectionV2)
 	var collectionRespMap = make(map[string]CollectionResp)
 	for _, ds := range docsnaps {
 		if ds.Exists() {
@@ -179,7 +170,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 				NFTs:     h.getNFTsForCollection(ds.Ref.ID, nfts),
 			}
 			// This is for Firestore
-			docSnapMap[ds.Ref.ID] = CollectionV2{
+			docSnapMap[ds.Ref.ID] = database.CollectionV2{
 				Floor:   floor,
 				Name:    ds.Data()["name"].(string),
 				Slug:    ds.Ref.ID,
@@ -196,13 +187,20 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
 		} else {
 			// Otherwise, add it to the database with floor -1
-			var c = CollectionV2{
+			var c = database.CollectionV2{
 				Name:    collection.Name,
 				Slug:    collection.Slug,
 				Floor:   -1,
 				Updated: time.Now(),
 			}
-			go h.addCollectionToDB(h.ctx, collection, c)
+			go database.AddCollectionToDB(
+				h.ctx,
+				&h.os,
+				h.logger,
+				h.database,
+				collection,
+				c,
+			)
 		}
 	}
 
@@ -223,37 +221,6 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	resp.TotalETH = totalETH
 
 	json.NewEncoder(w).Encode(resp)
-}
-
-func (h *Handler) addCollectionToDB(
-	ctx context.Context,
-	collection opensea.OpenSeaCollectionCollection,
-	c CollectionV2,
-) {
-	// Add collection to db
-	c.Updated = time.Now()
-
-	// Get stats
-	stat := h.getOpenSeaStats(collection.Slug)
-	if stat.FloorPrice >= 0.01 {
-		c.Floor = stat.FloorPrice
-		c.SevenDayVolume = stat.SevenDayVolume
-		_, err := h.database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
-		if err != nil {
-			h.logger.Error(err)
-			return
-		}
-		h.logger.Infof("Added collection %s to db", collection.Slug)
-	}
-}
-
-// getOpenSeaStats gets the floor price from collections on OpenSea
-func (h *Handler) getOpenSeaStats(docID string) opensea.OpenSeaCollectionStat {
-	stat, err := h.os.GetCollectionStatsForSlug(docID)
-	if err != nil {
-		h.logger.Error(err)
-	}
-	return stat
 }
 
 func (h *Handler) getNFTsForCollection(slug string, nfts []opensea.OpenSeaAsset) []NFT {

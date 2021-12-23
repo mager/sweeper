@@ -62,9 +62,9 @@ func (h *Handler) getCollection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hydrate response with OpenSea content
-	resp.Thumb = openSeaCollection.Collection.ImageURL
+	resp.Thumb = d["thumb"].(string)
 
+	// Hydrate response with OpenSea content
 	resp.OpenSeaCollection = openSeaCollection.Collection
 
 	// Fetch time-series data from BigQuery
