@@ -92,8 +92,6 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 
 func (e *EtherscanClient) GetAllNFTTransactionsForContract(
 	contract string,
-	page int,
-	offset int,
 ) ([]EtherscanTrx, error) {
 	return e.GetNFTTransactionsForContract(contract, 0, 1000)
 }

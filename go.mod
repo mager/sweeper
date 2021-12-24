@@ -11,7 +11,6 @@ require (
 	github.com/go-co-op/gocron v1.9.0
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kr/pretty v0.2.1
 	github.com/nanmu42/etherscan-api v1.6.0
 	github.com/wealdtech/go-ens/v3 v3.5.1
 	go.uber.org/fx v1.14.2

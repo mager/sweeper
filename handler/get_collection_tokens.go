@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/kr/pretty"
 )
 
 type CollectionToken struct {
@@ -45,8 +44,6 @@ func (h *Handler) getCollectionTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Infow("Got token transactions", "collection", slug, "txs", len(txs))
-
-	pretty.Print(txs)
 
 	// Set the ownersMap with the tokenID as the key and the to address as the value
 	for _, tx := range txs {
