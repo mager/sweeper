@@ -10,11 +10,13 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gorilla/mux"
 	"github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 	ens "github.com/wealdtech/go-ens/v3"
+	"go.uber.org/zap"
 )
 
 type NFT struct {
@@ -104,6 +106,144 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	if !common.IsHexAddress(address) {
 		// Fetch address from ENS if it's not a valid address
 		address = h.infuraClient.GetAddressFromENSName(req.Address)
+		if address == "" {
+			http.Error(w, "you must include a valid ETH address in the request", http.StatusBadRequest)
+			return
+		}
+	}
+
+	var (
+		collections        = make([]opensea.OpenSeaCollectionCollection, 0)
+		nfts               = make([]opensea.OpenSeaAsset, 0)
+		collectionSlugDocs = make([]*firestore.DocumentRef, 0)
+		resp               = GetInfoRespV2{}
+		ethPrice           float64
+		totalETH           float64
+
+		nftsChan        = make(chan []opensea.OpenSeaAsset)
+		collectionsChan = make(chan []opensea.OpenSeaCollectionCollection)
+		ethPriceChan    = make(chan float64)
+		ensNameChan     = make(chan string)
+	)
+
+	// Fetch the user's collections & NFTs from OpenSea
+	go h.asyncGetOpenSeaCollections(address, w, collectionsChan)
+	collections = <-collectionsChan
+
+	go h.asyncGetOpenSeaAssets(address, w, nftsChan)
+	nfts = <-nftsChan
+	resp.Photo = getPhoto(nfts)
+
+	// Get ETH price
+	go h.asyncGetETHPrice(ethPriceChan)
+	ethPrice = <-ethPriceChan
+
+	// Get ENS Name
+	go h.asyncGetENSNameFromAddress(address, ensNameChan)
+	resp.ENSName = <-ensNameChan
+
+	var slugToOSCollectionMap = make(map[string]opensea.OpenSeaCollectionCollection)
+	for _, collection := range collections {
+		collectionSlugDocs = append(collectionSlugDocs, h.database.Collection("collections").Doc(collection.Slug))
+		slugToOSCollectionMap[collection.Slug] = collection
+	}
+
+	// Check if the user's collections are in our database
+	docsnaps, err := h.database.GetAll(h.ctx, collectionSlugDocs)
+	if err != nil {
+		h.logger.Error(err)
+		return
+	}
+
+	var docSnapMap = make(map[string]database.CollectionV2)
+	var collectionRespMap = make(map[string]CollectionResp)
+	for _, ds := range docsnaps {
+		if ds.Exists() {
+			numOwned := slugToOSCollectionMap[ds.Ref.ID].OwnedAssetCount
+			floor := ds.Data()["floor"].(float64)
+			// This is for the response
+			collectionRespMap[ds.Ref.ID] = CollectionResp{
+				Name:     ds.Data()["name"].(string),
+				Floor:    floor,
+				Slug:     ds.Ref.ID,
+				Updated:  ds.Data()["updated"].(time.Time),
+				Thumb:    slugToOSCollectionMap[ds.Ref.ID].ImageURL,
+				NumOwned: numOwned,
+				NFTs:     h.getNFTsForCollection(ds.Ref.ID, nfts),
+			}
+			// This is for Firestore
+			docSnapMap[ds.Ref.ID] = database.CollectionV2{
+				Floor:   floor,
+				Name:    ds.Data()["name"].(string),
+				Slug:    ds.Ref.ID,
+				Updated: ds.Data()["updated"].(time.Time),
+			}
+
+			totalETH += utils.RoundFloat(float64(numOwned)*floor, 4)
+		}
+	}
+
+	for _, collection := range collections {
+		// Check docSnapMap to see if collection slug is in there
+		if _, ok := docSnapMap[collection.Slug]; ok {
+			resp.Collections = append(resp.Collections, collectionRespMap[collection.Slug])
+		} else {
+			// Otherwise, add it to the database with floor -1
+			var c = database.CollectionV2{
+				Name:    collection.Name,
+				Slug:    collection.Slug,
+				Floor:   -1,
+				Updated: time.Now(),
+			}
+			go database.AddCollectionToDB(
+				h.ctx,
+				&h.os,
+				h.logger,
+				h.database,
+				collection,
+				c,
+			)
+		}
+	}
+
+	if !req.SkipBQ {
+		bigquery.RecordRequestInBigQuery(
+			h.bq.DatasetInProject("floor-report-327113", "info"),
+			h.logger,
+			address,
+		)
+	}
+
+	sort.Slice(resp.Collections[:], func(i, j int) bool {
+		return resp.Collections[i].Floor > resp.Collections[j].Floor
+	})
+
+	resp.ETHPrice = ethPrice
+
+	resp.TotalETH = totalETH
+
+	json.NewEncoder(w).Encode(resp)
+}
+
+// getInfoV3 is the route handler for the GET /address/{address} endpoint
+func (h *Handler) getInfoV3(w http.ResponseWriter, r *http.Request) {
+	var (
+		err     error
+		req     InfoReq
+		address = mux.Vars(r)["address"]
+	)
+	h.logger.Info("getInfoV3", zap.String("address", address))
+
+	// Make sure that the request includes an address
+	if address == "" {
+		http.Error(w, "you must include an ETH address in the request", http.StatusBadRequest)
+		return
+	}
+
+	// Validate address
+	if !common.IsHexAddress(address) {
+		// Fetch address from ENS if it's not a valid address
+		address = h.infuraClient.GetAddressFromENSName(address)
 		if address == "" {
 			http.Error(w, "you must include a valid ETH address in the request", http.StatusBadRequest)
 			return

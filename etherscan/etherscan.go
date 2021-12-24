@@ -5,9 +5,16 @@ import (
 	etherscan "github.com/nanmu42/etherscan-api"
 )
 
-func ProvideEtherscan(cfg config.Config) *etherscan.Client {
+type EtherscanClient struct {
+	Client *etherscan.Client
+}
+
+func ProvideEtherscan(cfg config.Config) *EtherscanClient {
 	client := etherscan.New(etherscan.Mainnet, cfg.EtherscanAPIKey)
-	return client
+
+	return &EtherscanClient{
+		Client: client,
+	}
 }
 
 var Options = ProvideEtherscan

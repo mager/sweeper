@@ -22,7 +22,6 @@ import (
 	"github.com/mager/sweeper/logger"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/router"
-	"github.com/nanmu42/etherscan-api"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -50,7 +49,7 @@ func Register(
 	bq *bigquery.Client,
 	cfg config.Config,
 	cs cs.CoinstatsClient,
-	etherscanClient *etherscan.Client,
+	etherscanClient *ethscan.EtherscanClient,
 	database *firestore.Client,
 	infuraClient *infura.InfuraClient,
 	logger *zap.SugaredLogger,
@@ -79,6 +78,7 @@ func Register(
 		database,
 		dg,
 		infuraClient,
+		etherscanClient,
 	)
 
 	// Run cron tasks
