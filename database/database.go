@@ -85,6 +85,8 @@ func UpdateCollectionStats(
 		logger.Infow("Floor too low", "collection", docID)
 	}
 
+	time.Sleep(time.Millisecond * 500)
+
 	return floor, updated
 }
 

@@ -6,10 +6,9 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/mux"
 	"github.com/mager/sweeper/coinstats"
-	"github.com/mager/sweeper/config"
+	"github.com/mager/sweeper/infura"
 	"github.com/mager/sweeper/opensea"
 	"go.uber.org/zap"
 )
@@ -22,10 +21,9 @@ type Handler struct {
 	os           opensea.OpenSeaClient
 	bq           *bigquery.Client
 	cs           coinstats.CoinstatsClient
-	cfg          config.Config
 	database     *firestore.Client
 	bot          *discordgo.Session
-	infuraClient *ethclient.Client
+	infuraClient *infura.InfuraClient
 }
 
 // New creates a Handler struct
@@ -36,12 +34,11 @@ func New(
 	os opensea.OpenSeaClient,
 	bq *bigquery.Client,
 	cs coinstats.CoinstatsClient,
-	cfg config.Config,
 	database *firestore.Client,
 	bot *discordgo.Session,
-	infuraClient *ethclient.Client,
+	infuraClient *infura.InfuraClient,
 ) *Handler {
-	h := Handler{ctx, logger, router, os, bq, cs, cfg, database, bot, infuraClient}
+	h := Handler{ctx, logger, router, os, bq, cs, database, bot, infuraClient}
 	h.registerRoutes()
 
 	return &h

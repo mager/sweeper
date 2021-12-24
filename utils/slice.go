@@ -1,4 +1,4 @@
-package common
+package utils
 
 // Contains checks if a string is present in a slice
 func Contains(s []string, str string) bool {

@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/mager/sweeper/config"
 	"go.uber.org/zap"
 )
@@ -112,20 +111,15 @@ type OpenSeaAssetContract struct {
 type OpenSeaClient struct {
 	httpClient *http.Client
 	apiKey     string
+	logger     *zap.SugaredLogger
 }
 
 // ProvideOpenSea provides an HTTP client
-func ProvideOpenSea() OpenSeaClient {
+func ProvideOpenSea(cfg config.Config, logger *zap.SugaredLogger) OpenSeaClient {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
-	}
-
-	var cfg config.Config
-	err := envconfig.Process("floorreport", &cfg)
-	if err != nil {
-		log.Fatal(err.Error())
 	}
 
 	return OpenSeaClient{
@@ -133,13 +127,14 @@ func ProvideOpenSea() OpenSeaClient {
 			Transport: tr,
 		},
 		apiKey: cfg.OpenSeaAPIKey,
+		logger: logger,
 	}
 }
 
 var Options = ProvideOpenSea
 
 // GetCollectionsForAddress returns the collections for an address
-func (o *OpenSeaClient) GetCollectionsForAddress(logger *zap.SugaredLogger, address string, offset int) ([]OpenSeaCollectionCollection, error) {
+func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]OpenSeaCollectionCollection, error) {
 	u, err := url.Parse("https://api.opensea.io/api/v1/collections")
 	if err != nil {
 		log.Fatal(err)
@@ -152,7 +147,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(logger *zap.SugaredLogger, addr
 	u.RawQuery = q.Encode()
 
 	// Fetch collections
-	logger.Infow("Fetching collections from OpenSea", "address", address, "offset", offset)
+	o.logger.Infow("Fetching collections from OpenSea", "address", address, "offset", offset)
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
@@ -168,7 +163,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(logger *zap.SugaredLogger, addr
 	defer resp.Body.Close()
 
 	if resp.Status == "429 Too Many Requests" {
-		logger.Error("Too many requests, please try again later", "status", resp.StatusCode)
+		o.logger.Error("Too many requests, please try again later", "status", resp.StatusCode)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 
@@ -177,6 +172,11 @@ func (o *OpenSeaClient) GetCollectionsForAddress(logger *zap.SugaredLogger, addr
 	if err != nil {
 		log.Fatal(err)
 		return []OpenSeaCollectionCollection{}, nil
+	}
+
+	// TODO: Remove once OpenSea fixes rate limit
+	if offset > 50 {
+		time.Sleep(time.Millisecond * 250)
 	}
 
 	return openSeaCollections, nil
@@ -257,11 +257,11 @@ func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenS
 	return openSeaGetAssetsResp.Assets, nil
 }
 
-func (o *OpenSeaClient) GetAllCollectionsForAddress(logger *zap.SugaredLogger, address string) ([]OpenSeaCollectionCollection, error) {
+func (o *OpenSeaClient) GetAllCollectionsForAddress(address string) ([]OpenSeaCollectionCollection, error) {
 	var allCollections []OpenSeaCollectionCollection
 	offset := 0
 	for {
-		collections, err := o.GetCollectionsForAddress(logger, address, offset)
+		collections, err := o.GetCollectionsForAddress(address, offset)
 		if err != nil {
 			return []OpenSeaCollectionCollection{}, err
 		}
@@ -272,7 +272,7 @@ func (o *OpenSeaClient) GetAllCollectionsForAddress(logger *zap.SugaredLogger, a
 		offset += 50
 	}
 
-	logger.Infow("Found collections from OpenSea", "address", address, "count", len(allCollections))
+	o.logger.Infow("Found collections from OpenSea", "address", address, "count", len(allCollections))
 	return allCollections, nil
 }
 
@@ -362,4 +362,8 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	}
 
 	return collection, nil
+}
+
+func GetOpenSeaCollectionURL(docID string) string {
+	return fmt.Sprintf("https://opensea.io/collection/%s", docID)
 }

@@ -103,7 +103,7 @@ func (h *Handler) getInfoV2(w http.ResponseWriter, r *http.Request) {
 	// Validate address
 	if !common.IsHexAddress(address) {
 		// Fetch address from ENS if it's not a valid address
-		address = h.GetAddressFromENSName(req.Address)
+		address = h.infuraClient.GetAddressFromENSName(req.Address)
 		if address == "" {
 			http.Error(w, "you must include a valid ETH address in the request", http.StatusBadRequest)
 			return
@@ -289,7 +289,7 @@ func getPhoto(nfts []opensea.OpenSeaAsset) string {
 
 // asyncGetOpenSeaCollections gets the collections from OpenSea
 func (h *Handler) asyncGetOpenSeaCollections(address string, w http.ResponseWriter, rc chan []opensea.OpenSeaCollectionCollection) {
-	collections, err := h.os.GetAllCollectionsForAddress(h.logger, address)
+	collections, err := h.os.GetAllCollectionsForAddress(address)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -317,21 +317,11 @@ func (h *Handler) asyncGetETHPrice(rc chan float64) {
 }
 
 func (h *Handler) asyncGetENSNameFromAddress(address string, rc chan string) {
-	domain, err := ens.ReverseResolve(h.infuraClient, common.HexToAddress(address))
+	domain, err := ens.ReverseResolve(h.infuraClient.Client, common.HexToAddress(address))
 	if err != nil {
 		h.logger.Error(err)
 		rc <- ""
 	}
 
 	rc <- domain
-}
-
-func (h *Handler) GetAddressFromENSName(ensName string) string {
-	address, err := ens.Resolve(h.infuraClient, ensName)
-	if err != nil {
-		h.logger.Error(err)
-		return ""
-	}
-
-	return address.Hex()
 }
