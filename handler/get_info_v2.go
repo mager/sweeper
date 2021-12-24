@@ -277,16 +277,6 @@ func getOpenSeaTraitURL(asset opensea.OpenSeaAsset, trait opensea.OpenSeaAssetTr
 	)
 }
 
-// getUsername gets the username of the user
-func getUsername(nfts []opensea.OpenSeaAsset) string {
-	if len(nfts) == 0 {
-		return ""
-	}
-
-	// Use first NFT for now
-	return nfts[0].Owner.User.Username
-}
-
 // getPhoto gets the profile photo of the user
 func getPhoto(nfts []opensea.OpenSeaAsset) string {
 	if len(nfts) == 0 {
@@ -297,31 +287,9 @@ func getPhoto(nfts []opensea.OpenSeaAsset) string {
 	return nfts[0].Owner.ProfileImgURL
 }
 
-// getOpenSeaCollectionStats gets the stats from collections on OpenSea
-func (h *Handler) asyncGetOpenSeaCollectionStats(collections []opensea.OpenSeaCollectionCollection, w http.ResponseWriter, rc chan []CollectionStat) {
-	stats := make([]CollectionStat, 0)
-
-	for _, collection := range collections {
-		var (
-			cs CollectionStat
-		)
-		cs.Slug = collection.Slug
-
-		// Call OpenSea API to get stats
-		// TODO: Async
-		stat, err := h.os.GetCollectionStatsForSlug(collection.Slug)
-		if err != nil {
-			h.logger.Error(err)
-			continue
-		}
-		cs.FloorPrice = stat.FloorPrice
-	}
-	rc <- stats
-}
-
 // asyncGetOpenSeaCollections gets the collections from OpenSea
 func (h *Handler) asyncGetOpenSeaCollections(address string, w http.ResponseWriter, rc chan []opensea.OpenSeaCollectionCollection) {
-	collections, err := h.os.GetCollectionsForAddress(address)
+	collections, err := h.os.GetAllCollectionsForAddress(h.logger, address)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

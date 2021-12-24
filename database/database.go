@@ -58,7 +58,7 @@ func UpdateCollectionStats(
 	)
 
 	if collection.Collection.Slug != "" && floor >= 0.01 {
-		logger.Infof("Updating floor price to %v for %s", floor, docID)
+		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
 
 		// Update collection
 		_, err := doc.Ref.Update(ctx, []firestore.Update{
@@ -82,7 +82,7 @@ func UpdateCollectionStats(
 
 		updated = true
 	} else {
-		logger.Info("Floor too low for ", docID)
+		logger.Infow("Floor too low", "collection", docID)
 	}
 
 	return floor, updated
@@ -113,6 +113,6 @@ func AddCollectionToDB(
 			logger.Error(err)
 			return
 		}
-		logger.Infof("Added collection %s to db", collection.Slug)
+		logger.Infow("Added collection", "collection", collection.Slug)
 	}
 }

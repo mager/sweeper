@@ -10,6 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/mager/sweeper/config"
+	"go.uber.org/zap"
 )
 
 // OpenSeaV1CollectionResp represents an OpenSea collection and also the response from
@@ -138,17 +139,20 @@ func ProvideOpenSea() OpenSeaClient {
 var Options = ProvideOpenSea
 
 // GetCollectionsForAddress returns the collections for an address
-func (o *OpenSeaClient) GetCollectionsForAddress(address string) ([]OpenSeaCollectionCollection, error) {
-	u, err := url.Parse("https://api.opensea.io/api/v1/collections?&offset=0&limit=50")
+func (o *OpenSeaClient) GetCollectionsForAddress(logger *zap.SugaredLogger, address string, offset int) ([]OpenSeaCollectionCollection, error) {
+	u, err := url.Parse("https://api.opensea.io/api/v1/collections")
 	if err != nil {
 		log.Fatal(err)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 	q := u.Query()
+	q.Set("offset", fmt.Sprintf("%d", offset))
+	q.Set("limit", fmt.Sprintf("%d", 50))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
 	// Fetch collections
+	logger.Infow("Fetching collections from OpenSea", "address", address, "offset", offset)
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
@@ -164,7 +168,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string) ([]OpenSeaColle
 	defer resp.Body.Close()
 
 	if resp.Status == "429 Too Many Requests" {
-		log.Println("Too many requests, please try again later")
+		logger.Error("Too many requests, please try again later", "status", resp.StatusCode)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 
@@ -251,6 +255,25 @@ func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenS
 	}
 
 	return openSeaGetAssetsResp.Assets, nil
+}
+
+func (o *OpenSeaClient) GetAllCollectionsForAddress(logger *zap.SugaredLogger, address string) ([]OpenSeaCollectionCollection, error) {
+	var allCollections []OpenSeaCollectionCollection
+	offset := 0
+	for {
+		collections, err := o.GetCollectionsForAddress(logger, address, offset)
+		if err != nil {
+			return []OpenSeaCollectionCollection{}, err
+		}
+		if len(collections) == 0 {
+			break
+		}
+		allCollections = append(allCollections, collections...)
+		offset += 50
+	}
+
+	logger.Infow("Found collections from OpenSea", "address", address, "count", len(allCollections))
+	return allCollections, nil
 }
 
 // GetAllAssetsForAddress returns the assets for an address
