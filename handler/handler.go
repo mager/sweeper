@@ -61,5 +61,5 @@ func (h *Handler) registerRoutes() {
 	h.router.HandleFunc("/collection/{slug}", h.getCollection).Methods("GET")
 
 	// Testing
-	h.router.HandleFunc("/collection/{slug}/owners", h.getCollectionOwners).Methods("GET")
+	h.router.HandleFunc("/collection/{slug}/tokens", h.getCollectionTokens).Methods("GET")
 }

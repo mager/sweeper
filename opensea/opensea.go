@@ -230,7 +230,6 @@ func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenS
 	}
 	q := u.Query()
 	q.Set("owner", address)
-	o.httpClient.Get("")
 	u.RawQuery = q.Encode()
 
 	// Fetch assets
