@@ -16,11 +16,12 @@ type GetTrendingResp struct {
 }
 
 type TrendingCollection struct {
-	Rank  int     `json:"rank"`
-	Name  string  `json:"name"`
-	Slug  string  `json:"slug"`
-	Thumb string  `json:"thumb"`
-	Value float64 `json:"value"`
+	Rank       int     `json:"rank"`
+	Name       string  `json:"name"`
+	Slug       string  `json:"slug"`
+	Thumb      string  `json:"thumb"`
+	Value      float64 `json:"value"`
+	ValueExtra float64 `json:"valueExtra"`
 }
 
 func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
@@ -62,11 +63,12 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		resp.TopWeeklyVolume = append(resp.TopWeeklyVolume, TrendingCollection{
-			Rank:  len(resp.TopWeeklyVolume) + 1,
-			Name:  doc.Data()["name"].(string),
-			Slug:  doc.Data()["slug"].(string),
-			Thumb: doc.Data()["thumb"].(string),
-			Value: utils.RoundFloat(doc.Data()["7d"].(float64), 2),
+			Rank:       len(resp.TopWeeklyVolume) + 1,
+			Name:       doc.Data()["name"].(string),
+			Slug:       doc.Data()["slug"].(string),
+			Thumb:      doc.Data()["thumb"].(string),
+			Value:      utils.RoundFloat(doc.Data()["7d"].(float64), 2),
+			ValueExtra: utils.RoundFloat(doc.Data()["floor"].(float64), 2),
 		})
 	}
 
