@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sort"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mager/sweeper/utils"
@@ -26,13 +27,16 @@ type TrendingCollection struct {
 
 func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 	var (
-		ctx         = context.TODO()
-		resp        = GetTrendingResp{}
-		collections = h.database.Collection("collections")
+		ctx                     = context.TODO()
+		resp                    = GetTrendingResp{}
+		collections             = h.database.Collection("collections")
+		highestFloorCollections = make([]TrendingCollection, 0)
+		highestFloorCounter     = 0
 	)
 
 	// Fetch collections with the highest floor price
-	highestFloorIter := collections.Where("floor", "<", 1000).OrderBy("floor", firestore.Desc).Limit(20).Documents(ctx)
+	highestFloorIter := collections.Documents(ctx)
+
 	for {
 		doc, err := highestFloorIter.Next()
 		if err == iterator.Done {
@@ -42,17 +46,45 @@ func (h *Handler) getTrending(w http.ResponseWriter, r *http.Request) {
 			h.logger.Errorf("Error fetching collections: %v", err)
 			break
 		}
-		resp.TopHighestFloor = append(resp.TopHighestFloor, TrendingCollection{
-			Rank:  len(resp.TopHighestFloor) + 1,
-			Name:  doc.Data()["name"].(string),
-			Slug:  doc.Data()["slug"].(string),
-			Thumb: doc.Data()["thumb"].(string),
-			Value: doc.Data()["floor"].(float64),
-		})
+
+		thumb, ok := doc.Data()["thumb"].(string)
+		if !ok {
+			thumb = ""
+		}
+
+		sevenDayVolume, ok := doc.Data()["7d"].(float64)
+		if !ok {
+			sevenDayVolume = 0.0
+		}
+
+		// Only add collections with a weekly volume of over 1 ETH
+		if sevenDayVolume > 1.0 {
+			highestFloorCollections = append(highestFloorCollections, TrendingCollection{
+				Name:  doc.Data()["name"].(string),
+				Slug:  doc.Data()["slug"].(string),
+				Thumb: thumb,
+				Value: doc.Data()["floor"].(float64),
+			})
+		}
+	}
+	h.logger.Infow("Fetched collections", "howmany", len(highestFloorCollections))
+
+	// Sort highest floor collections by floor price
+	sort.Slice(highestFloorCollections[:], func(i, j int) bool {
+		return highestFloorCollections[i].Value > highestFloorCollections[j].Value
+	})
+
+	// Only add the first 25 items to the response
+	for _, collection := range highestFloorCollections {
+		if highestFloorCounter < 25 {
+			collection.Rank = highestFloorCounter + 1
+			resp.TopHighestFloor = append(resp.TopHighestFloor, collection)
+		}
+		highestFloorCounter++
 	}
 
 	// Fetch collections with the highest 7d weekly volume
-	highestWeeklyVolumeIter := collections.OrderBy("7d", firestore.Desc).Limit(20).Documents(ctx)
+	highestWeeklyVolumeIter := collections.OrderBy("7d", firestore.Desc).Limit(25).Documents(ctx)
 	for {
 		doc, err := highestWeeklyVolumeIter.Next()
 		if err == iterator.Done {
