@@ -62,7 +62,10 @@ func (h *Handler) getCollection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp.Thumb = d["thumb"].(string)
+	thumb, ok := d["thumb"].(string)
+	if ok {
+		resp.Thumb = thumb
+	}
 
 	// Hydrate response with OpenSea content
 	resp.OpenSeaCollection = openSeaCollection.Collection

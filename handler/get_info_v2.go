@@ -16,7 +16,6 @@ import (
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 	ens "github.com/wealdtech/go-ens/v3"
-	"go.uber.org/zap"
 )
 
 type NFT struct {
@@ -232,7 +231,6 @@ func (h *Handler) getInfoV3(w http.ResponseWriter, r *http.Request) {
 		req     InfoReq
 		address = mux.Vars(r)["address"]
 	)
-	h.logger.Info("getInfoV3", zap.String("address", address))
 
 	// Make sure that the request includes an address
 	if address == "" {

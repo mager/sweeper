@@ -137,7 +137,7 @@ var Options = ProvideOpenSea
 func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]OpenSeaCollectionCollection, error) {
 	u, err := url.Parse("https://api.opensea.io/api/v1/collections")
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 	q := u.Query()
@@ -151,13 +151,13 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 	defer resp.Body.Close()
@@ -170,7 +170,8 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 	var openSeaCollections []OpenSeaCollectionCollection
 	err = json.NewDecoder(resp.Body).Decode(&openSeaCollections)
 	if err != nil {
-		log.Fatal(err)
+
+		o.logger.Error(err)
 		return []OpenSeaCollectionCollection{}, nil
 	}
 
@@ -186,7 +187,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectionStat, error) {
 	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/collection/%s/stats", slug))
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return OpenSeaCollectionStat{}, nil
 	}
 	q := u.Query()
@@ -196,7 +197,7 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return OpenSeaCollectionStat{}, nil
 	}
 
@@ -206,7 +207,7 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 		return OpenSeaCollectionStat{}, nil
 	}
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return OpenSeaCollectionStat{}, nil
 	}
 	defer resp.Body.Close()
@@ -214,7 +215,7 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 	var stat OpenSeaCollectionStatResp
 	err = json.NewDecoder(resp.Body).Decode(&stat)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return OpenSeaCollectionStat{}, nil
 	}
 
@@ -225,7 +226,7 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenSeaAsset, error) {
 	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=50", offset))
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaAsset{}, nil
 	}
 	q := u.Query()
@@ -236,12 +237,12 @@ func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenS
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaAsset{}, nil
 	}
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaAsset{}, nil
 	}
 	defer resp.Body.Close()
@@ -249,7 +250,7 @@ func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenS
 	var openSeaGetAssetsResp OpenSeaGetAssetsResp
 	err = json.NewDecoder(resp.Body).Decode(&openSeaGetAssetsResp)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return []OpenSeaAsset{}, nil
 	}
 
@@ -318,10 +319,9 @@ func (o *OpenSeaClient) GetAllAssetsForAddress(address string) ([]OpenSeaAsset, 
 // GetCollection returns the collection from OpenSea
 func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error) {
 	var collection OpenSeaCollectionResp
-
 	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/collection/%s", slug))
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return collection, nil
 	}
 	q := u.Query()
@@ -331,21 +331,21 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
-		log.Printf("Error creating request: %s", slug)
-		log.Fatal(err)
+		o.logger.Infof("Error creating request: %s", slug)
+		o.logger.Error(err)
 		return collection, nil
 	}
 
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
-		log.Printf("Error doing request: %s", slug)
-		log.Fatal(err)
+		o.logger.Infof("Error doing request: %s", slug)
+		o.logger.Error(err)
 		return collection, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		log.Printf("Collection not found: %s", slug)
+		o.logger.Infof("Collection not found: %s", slug)
 		// TODO: Delete Collection from Firestore
 		return collection, nil
 	}
@@ -356,7 +356,7 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 
 	err = json.NewDecoder(resp.Body).Decode(&collection)
 	if err != nil {
-		log.Fatal(err)
+		o.logger.Error(err)
 		return collection, nil
 	}
 
