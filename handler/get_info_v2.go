@@ -15,6 +15,7 @@ import (
 	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
+	"github.com/patrickmn/go-cache"
 	ens "github.com/wealdtech/go-ens/v3"
 )
 
@@ -230,6 +231,7 @@ func (h *Handler) getInfoV3(w http.ResponseWriter, r *http.Request) {
 		err     error
 		req     InfoReq
 		address = mux.Vars(r)["address"]
+		c       = cache.New(5*time.Minute, 10*time.Minute)
 	)
 
 	// Make sure that the request includes an address
@@ -357,6 +359,8 @@ func (h *Handler) getInfoV3(w http.ResponseWriter, r *http.Request) {
 	resp.ETHPrice = ethPrice
 
 	resp.TotalETH = totalETH
+
+	c.Set(address, resp, cache.DefaultExpiration)
 
 	json.NewEncoder(w).Encode(resp)
 }

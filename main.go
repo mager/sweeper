@@ -82,7 +82,7 @@ func Register(
 	)
 
 	// Run cron tasks
-	cron.Initialize(ctx, logger, s, openSeaClient, database, bq, dg)
+	// cron.Initialize(ctx, logger, s, openSeaClient, database, bq, dg)
 
 	// Discord bot
 	// TODO: Move this bot out of this app!
