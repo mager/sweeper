@@ -50,9 +50,10 @@ func Initialize(
 	// t.updateCollectionsWithCustomQuery(ctx)
 	// t.deleteCollectionsWithCustomQuery(ctx)
 
-	s.Every(4).Hours().Do(func() {
+	s.Every(1).Day().At("10:30").Do(func() {
 		// Update new collections
 		// TODO: Move to handler
+		t.logger.Info("HELLO!")
 		t.updateNewCollections(ctx)
 
 		// Update all collections if their 7 day volume is over 0.5 ETH
