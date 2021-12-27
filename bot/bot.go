@@ -40,7 +40,8 @@ func New(
 	}
 
 	// Cleanly close down the Discord session.
-	defer dg.Close()
+	// defer dg.Close()
+	logger.Info("Discord bot is listening via websockets")
 }
 
 func messageCreate(ctx context.Context, logger *zap.SugaredLogger, database *firestore.Client, openSeaClient opensea.OpenSeaClient) func(s *discordgo.Session, m *discordgo.MessageCreate) {
