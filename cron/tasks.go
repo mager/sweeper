@@ -47,21 +47,16 @@ func Initialize(
 	)
 
 	// DEBUG: Custom queries
-	// t.updateCollectionsWithCustomQuery(ctx)
-	// t.deleteCollectionsWithCustomQuery(ctx)
+	t.updateCollectionsWithCustomQuery(ctx)
+	t.deleteCollectionsWithCustomQuery(ctx)
 
-	s.Every(1).Day().At("10:30").Do(func() {
+	s.Every(1).Day().Do(func() {
 		// Update new collections
-		// TODO: Move to handler
-		t.logger.Info("HELLO!")
 		t.updateNewCollections(ctx)
 
 		// Update all collections if their 7 day volume is over 0.5 ETH
 		t.updateTierACollections(ctx)
 
-	})
-
-	s.Every(1).Day().Do(func() {
 		// Update less active collections
 		t.updateTierBCollections(ctx)
 	})
@@ -255,7 +250,7 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 	t.logger.Info("Updating collections with custom query")
 
 	var (
-		q = "Missing thumbnail"
+		q = "Update all"
 		// twoHoursAgo = time.Now().Add(-2 * time.Hour)
 
 		collections = t.database.Collection("collections")
@@ -280,19 +275,16 @@ func (t *Tasks) updateCollectionsWithCustomQuery(ctx context.Context) {
 		count++
 	}
 
-	// Fetch only docs where thumb is not present on the object
 	for _, doc := range docs {
-		if doc.Data()["thumb"] == nil {
-			// Update the floor price
-			database.UpdateCollectionStats(
-				ctx,
-				&t.os,
-				t.bq,
-				t.logger,
-				doc,
-			)
-			time.Sleep(time.Millisecond * 500)
-		}
+		// Update the floor price
+		database.UpdateCollectionStats(
+			ctx,
+			&t.os,
+			t.bq,
+			t.logger,
+			doc,
+		)
+		time.Sleep(time.Millisecond * 250)
 	}
 
 	// Post to Discord
