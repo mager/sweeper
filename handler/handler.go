@@ -38,7 +38,7 @@ var (
 			queryCond: Condition{
 				path:  "updated",
 				op:    "<",
-				value: time.Now().Add(-6 * time.Hour),
+				value: time.Now().Add(-2 * time.Hour),
 			},
 			updateCond: Condition{
 				path:  "7d",
@@ -52,7 +52,7 @@ var (
 			queryCond: Condition{
 				path:  "updated",
 				op:    "<",
-				value: time.Now().Add(-7 * 24 * time.Hour),
+				value: time.Now().Add(-3 * 24 * time.Hour),
 			},
 			updateCond: Condition{
 				path:  "7d",
