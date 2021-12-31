@@ -181,7 +181,17 @@ func (h *Handler) updateCollections(collectionType CollectionType) {
 						doc,
 					)
 				} else {
-					h.logger.Infof("Floor not updated for %s because %s %s %f", doc.Ref.ID, c.updateCond.path, c.updateCond.op, c.updateCond.value)
+					h.logger.Infow(
+						"Floor not updated",
+						"collection", doc.Ref.ID,
+						"cond", fmt.Sprintf(
+							"%s %.2f %s %.2f",
+							c.updateCond.path,
+							doc.Data()[c.updateCond.path].(float64),
+							c.updateCond.op,
+							c.updateCond.value,
+						),
+					)
 				}
 			} else if c.updateCond.op == ">" {
 				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
@@ -193,7 +203,17 @@ func (h *Handler) updateCollections(collectionType CollectionType) {
 						doc,
 					)
 				} else {
-					h.logger.Infof("Floor not updated for %s because %s %s %f", doc.Ref.ID, c.updateCond.path, c.updateCond.op, c.updateCond.value)
+					h.logger.Infow(
+						"Floor not updated",
+						"collection", doc.Ref.ID,
+						"cond", fmt.Sprintf(
+							"%s %.2f %s %.2f",
+							c.updateCond.path,
+							doc.Data()[c.updateCond.path].(float64),
+							c.updateCond.op,
+							c.updateCond.value,
+						),
+					)
 				}
 			}
 		} else {
