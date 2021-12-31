@@ -22,6 +22,9 @@ type CollectionV2 struct {
 	SevenDayVolume  float64   `firestore:"7d" json:"7d"`
 	ThirtyDayVolume float64   `firestore:"30d" json:"30d"`
 	MarketCap       float64   `firestore:"cap" json:"cap"`
+	TotalSupply     float64   `firestore:"supply" json:"supply"`
+	NumOwners       int       `firestore:"num" json:"num"`
+	TotalSales      float64   `firestore:"sales" json:"sales"`
 	Updated         time.Time `firestore:"updated" json:"updated"`
 }
 
@@ -60,6 +63,9 @@ func UpdateCollectionStats(
 		oneDayVol    = stats.OneDayVolume
 		thirtyDayVol = stats.ThirtyDayVolume
 		marketCap    = stats.MarketCap
+		numOwners    = stats.NumOwners
+		totalSupply  = stats.TotalSupply
+		totalSales   = stats.TotalSales
 		now          = time.Now()
 		updated      bool
 	)
@@ -69,11 +75,14 @@ func UpdateCollectionStats(
 
 		// Update collection
 		_, err := doc.Ref.Update(ctx, []firestore.Update{
-			{Path: "floor", Value: floor},
 			{Path: "1d", Value: utils.RoundFloat(oneDayVol, 3)},
-			{Path: "7d", Value: utils.RoundFloat(sevenDayVol, 3)},
 			{Path: "30d", Value: utils.RoundFloat(thirtyDayVol, 3)},
+			{Path: "7d", Value: utils.RoundFloat(sevenDayVol, 3)},
 			{Path: "cap", Value: utils.RoundFloat(marketCap, 3)},
+			{Path: "floor", Value: floor},
+			{Path: "num", Value: numOwners},
+			{Path: "sales", Value: utils.RoundFloat(totalSales, 3)},
+			{Path: "supply", Value: utils.RoundFloat(totalSupply, 3)},
 			{Path: "thumb", Value: collection.Collection.ImageURL},
 			{Path: "updated", Value: now},
 		})
@@ -92,7 +101,7 @@ func UpdateCollectionStats(
 
 		updated = true
 	} else {
-		logger.Infow("Floor too low", "collection", docID)
+		logger.Infow("Floor below 0.01", "collection", docID, "floor", floor)
 	}
 
 	time.Sleep(time.Millisecond * 500)
@@ -118,11 +127,14 @@ func AddCollectionToDB(
 	}
 	if stat.FloorPrice >= 0.01 {
 		c.Floor = stat.FloorPrice
+		c.MarketCap = stat.MarketCap
+		c.NumOwners = stat.NumOwners
+		c.OneDayVolume = stat.OneDayVolume
 		c.SevenDayVolume = stat.SevenDayVolume
 		c.ThirtyDayVolume = stat.ThirtyDayVolume
-		c.OneDayVolume = stat.OneDayVolume
-		c.MarketCap = stat.MarketCap
 		c.Thumb = collection.ImageURL
+		c.TotalSales = stat.TotalSales
+		c.TotalSupply = stat.TotalSupply
 		_, err := database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
 		if err != nil {
 			logger.Error(err)
