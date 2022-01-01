@@ -54,6 +54,10 @@ func UpdateCollectionStats(
 	collection, err := openSeaClient.GetCollection(docID)
 	if err != nil {
 		logger.Error(err)
+
+		if err.Error() == opensea.OpenSeaNotFoundError {
+			DeleteCollection(ctx, logger, doc)
+		}
 	}
 
 	var (
@@ -142,4 +146,20 @@ func AddCollectionToDB(
 		}
 		logger.Infow("Added collection", "collection", collection.Slug)
 	}
+}
+
+func DeleteCollection(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	doc *firestore.DocumentSnapshot,
+) {
+	collection := doc.Ref.ID
+
+	// Delete collection from db
+	_, err := doc.Ref.Delete(ctx)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	logger.Infow("Deleted collection", "collection", collection)
 }

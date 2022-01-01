@@ -2,6 +2,7 @@ package opensea
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,14 @@ import (
 	"github.com/mager/sweeper/config"
 	"go.uber.org/zap"
 )
+
+var (
+	OpenSeaNotFoundError = "collection_not_found"
+)
+
+func NewOpenSeaNotFoundError() error {
+	return errors.New(OpenSeaNotFoundError)
+}
 
 // OpenSeaV1CollectionResp represents an OpenSea collection and also the response from
 // the v1/collection/{slug} endpoint
@@ -203,9 +212,9 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 
 	resp, err := o.httpClient.Do(req)
 	if resp.StatusCode == http.StatusNotFound {
-		// TODO: Delete collection from Firestore
-		return OpenSeaCollectionStat{}, nil
+		return OpenSeaCollectionStat{}, NewOpenSeaNotFoundError()
 	}
+
 	if err != nil {
 		o.logger.Error(err)
 		return OpenSeaCollectionStat{}, nil
@@ -345,9 +354,8 @@ func (o *OpenSeaClient) GetCollection(slug string) (OpenSeaCollectionResp, error
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		o.logger.Infof("Collection not found: %s", slug)
-		// TODO: Delete Collection from Firestore
-		return collection, nil
+		o.logger.Infow("Collection not found", "collection", slug)
+		return collection, NewOpenSeaNotFoundError()
 	}
 	if resp.StatusCode == http.StatusTooManyRequests {
 		log.Println("Too many requests, please try again later")

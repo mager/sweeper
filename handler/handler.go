@@ -181,17 +181,7 @@ func (h *Handler) updateCollections(collectionType CollectionType) {
 						doc,
 					)
 				} else {
-					h.logger.Infow(
-						"Floor not updated",
-						"collection", doc.Ref.ID,
-						"cond", fmt.Sprintf(
-							"%s %.2f %s %.2f",
-							c.updateCond.path,
-							doc.Data()[c.updateCond.path].(float64),
-							c.updateCond.op,
-							c.updateCond.value,
-						),
-					)
+					h.logNoUpdate(doc, c)
 				}
 			} else if c.updateCond.op == ">" {
 				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
@@ -203,17 +193,7 @@ func (h *Handler) updateCollections(collectionType CollectionType) {
 						doc,
 					)
 				} else {
-					h.logger.Infow(
-						"Floor not updated",
-						"collection", doc.Ref.ID,
-						"cond", fmt.Sprintf(
-							"%s %.2f %s %.2f",
-							c.updateCond.path,
-							doc.Data()[c.updateCond.path].(float64),
-							c.updateCond.op,
-							c.updateCond.value,
-						),
-					)
+					h.logNoUpdate(doc, c)
 				}
 			}
 		} else {
@@ -255,4 +235,18 @@ func (h *Handler) updateCollections(collectionType CollectionType) {
 	}
 
 	h.logger.Infof("Updated %d collections", count)
+}
+
+func (h *Handler) logNoUpdate(doc *firestore.DocumentSnapshot, c Config) {
+	h.logger.Infow(
+		"Floor not updated",
+		"collection", doc.Ref.ID,
+		"cond", fmt.Sprintf(
+			"%s %.2f %s %.2f",
+			c.updateCond.path,
+			doc.Data()[c.updateCond.path].(float64),
+			c.updateCond.op,
+			c.updateCond.value,
+		),
+	)
 }
