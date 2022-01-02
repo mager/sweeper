@@ -13,6 +13,22 @@ import (
 	"go.uber.org/zap"
 )
 
+type Collection struct {
+	Name            string    `firestore:"name" json:"name"`
+	Thumb           string    `firestore:"thumb" json:"thumb"`
+	Floor           float64   `firestore:"floor" json:"floor"`
+	Slug            string    `firestore:"slug" json:"slug"`
+	OneDayVolume    float64   `firestore:"1d" json:"1d"`
+	SevenDayVolume  float64   `firestore:"7d" json:"7d"`
+	ThirtyDayVolume float64   `firestore:"30d" json:"30d"`
+	MarketCap       float64   `firestore:"cap" json:"cap"`
+	TotalSupply     float64   `firestore:"supply" json:"supply"`
+	NumOwners       int       `firestore:"num" json:"num"`
+	TotalSales      float64   `firestore:"sales" json:"sales"`
+	Updated         time.Time `firestore:"updated" json:"updated"`
+}
+
+// TODO: Delete
 type CollectionV2 struct {
 	Name            string    `firestore:"name" json:"name"`
 	Thumb           string    `firestore:"thumb" json:"thumb"`
@@ -26,6 +42,17 @@ type CollectionV2 struct {
 	NumOwners       int       `firestore:"num" json:"num"`
 	TotalSales      float64   `firestore:"sales" json:"sales"`
 	Updated         time.Time `firestore:"updated" json:"updated"`
+}
+
+type User struct {
+	Collections []string `firestore:"collections" json:"collections"`
+	ENSName     string   `firestore:"ensName" json:"ensName"`
+	Slug        string   `firestore:"slug" json:"slug"`
+	Name        string   `firestore:"name" json:"name"`
+	Photo       string   `firestore:"photo" json:"photo"`
+	Twitter     string   `firestore:"twitter" json:"twitter"`
+	OpenSea     string   `firestore:"openSea" json:"openSea"`
+	IsWhale     bool     `firestore:"isWhale" json:"isWhale"`
 }
 
 // ProvideDB provides a firestore client
