@@ -197,7 +197,7 @@ func (h *Handler) updateCollections(collectionType CollectionType) bool {
 
 	if !found {
 		h.logger.Errorf("Invalid collection type: %s", collectionType)
-		return
+		return false
 	}
 
 	h.logger.Info(c.log)
