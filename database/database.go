@@ -118,16 +118,24 @@ func AddCollectionToDB(
 	openSeaClient *opensea.OpenSeaClient,
 	logger *zap.SugaredLogger,
 	database *firestore.Client,
-	collection opensea.OpenSeaCollectionCollection,
-	c CollectionV2,
-) {
+	slug string,
+) (float64, bool) {
 	// Add collection to db
-	c.Updated = time.Now()
+	var (
+		c = CollectionV2{
+			Updated: time.Now(),
+		}
+		floor float64
+	)
 
-	// Get stats
-	stat, err := openSeaClient.GetCollectionStatsForSlug(collection.Slug)
+	// Get collection from OpenSea
+	collection, err := openSeaClient.GetCollection(slug)
+	stat := collection.Collection.Stats
+	floor = stat.FloorPrice
+
 	if err != nil {
 		logger.Error(err)
+		return floor, false
 	}
 	if stat.FloorPrice >= 0.01 {
 		c.Floor = stat.FloorPrice
@@ -136,16 +144,20 @@ func AddCollectionToDB(
 		c.OneDayVolume = stat.OneDayVolume
 		c.SevenDayVolume = stat.SevenDayVolume
 		c.ThirtyDayVolume = stat.ThirtyDayVolume
-		c.Thumb = collection.ImageURL
+		c.Thumb = collection.Collection.ImageURL
 		c.TotalSales = stat.TotalSales
 		c.TotalSupply = stat.TotalSupply
-		_, err := database.Collection("collections").Doc(collection.Slug).Set(ctx, c)
+		c.Slug = slug
+		c.Name = collection.Collection.Name
+		_, err := database.Collection("collections").Doc(slug).Set(ctx, c)
 		if err != nil {
 			logger.Error(err)
-			return
+			return floor, false
 		}
-		logger.Infow("Added collection", "collection", collection.Slug)
+		logger.Infow("Added collection", "collection", slug)
 	}
+
+	return floor, true
 }
 
 func DeleteCollection(

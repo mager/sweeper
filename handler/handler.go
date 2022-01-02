@@ -67,6 +67,7 @@ type CollectionType string
 
 type Req struct {
 	CollectionType CollectionType `json:"collection_type"`
+	Slug           string         `json:"slug"`
 }
 
 type Resp struct {
@@ -128,13 +129,69 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.updateCollections(req.CollectionType)
+	if req.CollectionType == "" {
+		if req.Slug == "" {
+			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
+			return
+		}
+		resp.Success = h.updateSingleCollection(req, &resp)
+	} else {
+		resp.Success = h.updateCollections(req.CollectionType)
+	}
 
 	json.NewEncoder(w).Encode(resp)
 }
 
+// updateSingleCollection updates a single collection
+func (h *Handler) updateSingleCollection(req Req, resp *Resp) bool {
+	var (
+		collections = h.database.Collection("collections")
+		iter        = collections.Where("slug", "==", req.Slug).Documents(h.ctx)
+		err         error
+		floor       float64
+		updated     bool
+	)
+
+	// Fetch collection from Firestore
+	doc, err := iter.Next()
+	if err != nil {
+		h.logger.Errorw(
+			"Error fetching collection from Firestore",
+			"err", err,
+		)
+
+		// Add the collection if it doesn't exist
+		if err == iterator.Done {
+			floor, updated = database.AddCollectionToDB(h.ctx, &h.os, h.logger, h.database, req.Slug)
+
+			h.logger.Infow(
+				"Collection added",
+				"collection", req.Slug,
+				"floor", floor,
+				"updated", updated,
+			)
+
+			return updated
+		}
+
+		return updated
+	}
+
+	// Update collection
+	floor, updated = database.UpdateCollectionStats(h.ctx, &h.os, h.bq, h.logger, doc)
+
+	h.logger.Infow(
+		"Collection updated",
+		"collection", doc.Ref.ID,
+		"floor", floor,
+		"updated", updated,
+	)
+
+	return updated
+}
+
 // updateCollections updates the collections in the database based on a custom config
-func (h *Handler) updateCollections(collectionType CollectionType) {
+func (h *Handler) updateCollections(collectionType CollectionType) bool {
 	// Fetch config
 	c, found := UpdateConfig[collectionType]
 
@@ -235,6 +292,8 @@ func (h *Handler) updateCollections(collectionType CollectionType) {
 	}
 
 	h.logger.Infof("Updated %d collections", count)
+
+	return true
 }
 
 func (h *Handler) logNoUpdate(doc *firestore.DocumentSnapshot, c Config) {
