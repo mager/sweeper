@@ -20,9 +20,14 @@ import (
 
 var (
 	CollectionTypeNew   CollectionType = "new"
+	CollectionTypeAll   CollectionType = "all"
 	CollectionTypeTierA CollectionType = "a"
 	CollectionTypeTierB CollectionType = "b"
 	UpdateConfig                       = map[CollectionType]Config{
+		CollectionTypeAll: {
+			desc: "All collections",
+			log:  "Updating all collections",
+		},
 		CollectionTypeNew: {
 			desc: "Collections added in the last 4 hours",
 			log:  "Updating new collections",
@@ -211,6 +216,8 @@ func (h *Handler) updateCollections(collectionType CollectionType) bool {
 
 	if c.queryCond.path != "" {
 		iter = collections.Where(c.queryCond.path, c.queryCond.op, c.queryCond.value).Documents(h.ctx)
+	} else {
+		iter = collections.Documents(h.ctx)
 	}
 
 	defer iter.Stop()
