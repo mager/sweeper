@@ -70,12 +70,16 @@ var (
 
 type CollectionType string
 
-type Req struct {
+type UpdateCollectionsReq struct {
 	CollectionType CollectionType `json:"collection_type"`
 	Slug           string         `json:"slug"`
 }
 
-type Resp struct {
+type UpdateCollectionsResp struct {
+	Success bool `json:"success"`
+}
+
+type UpdateUsersResp struct {
 	Success bool `json:"success"`
 }
 
@@ -119,14 +123,18 @@ func New(
 
 // RegisterRoutes registers all the routes for the route handler
 func (h *Handler) registerRoutes() {
-	h.router.HandleFunc("/update", h.update).
+	// Update collections
+	h.router.HandleFunc("/update/collections", h.updateCollections).
+		Methods("POST")
+	// Update users
+	h.router.HandleFunc("/update/users", h.updateUsers).
 		Methods("POST")
 }
 
-func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 	var (
-		req  Req
-		resp = Resp{}
+		req  UpdateCollectionsReq
+		resp = UpdateCollectionsResp{}
 	)
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -141,14 +149,30 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		}
 		resp.Success = h.updateSingleCollection(req, &resp)
 	} else {
-		resp.Success = h.updateCollections(req.CollectionType)
+		resp.Success = h.updateCollectionsByType(req.CollectionType)
 	}
 
 	json.NewEncoder(w).Encode(resp)
 }
 
+func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
+	var (
+		// req  UpdateCollectionsReq
+		resp = UpdateCollectionsResp{}
+	)
+
+	// if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
+	resp.Success = h.updateAddresses()
+
+	json.NewEncoder(w).Encode(resp)
+}
+
 // updateSingleCollection updates a single collection
-func (h *Handler) updateSingleCollection(req Req, resp *Resp) bool {
+func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) bool {
 	var (
 		collections = h.database.Collection("collections")
 		iter        = collections.Where("slug", "==", req.Slug).Documents(h.ctx)
@@ -195,8 +219,8 @@ func (h *Handler) updateSingleCollection(req Req, resp *Resp) bool {
 	return updated
 }
 
-// updateCollections updates the collections in the database based on a custom config
-func (h *Handler) updateCollections(collectionType CollectionType) bool {
+// updateCollectionsByType updates the collections in the database based on a custom config
+func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 	// Fetch config
 	c, found := UpdateConfig[collectionType]
 
@@ -315,4 +339,111 @@ func (h *Handler) logNoUpdate(doc *firestore.DocumentSnapshot, c Config) {
 			c.updateCond.value,
 		),
 	)
+}
+
+// updateAddresses updates a single collection
+func (h *Handler) updateAddresses() bool {
+	var (
+		ctx                    = context.Background()
+		collections            = h.database.Collection("users")
+		iter                   = collections.Where("isWhale", "==", true).Limit(1).Documents(h.ctx)
+		u                      database.User
+		openseaCollections     = make([]opensea.OpenSeaCollectionV2, 0)
+		openseaAssets          = make([]opensea.OpenSeaAssetV2, 0)
+		openseaAssetsChan      = make(chan []opensea.OpenSeaAssetV2)
+		openseaCollectionsChan = make(chan []opensea.OpenSeaCollectionV2)
+	)
+
+	// Fetch collection from Firestore
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// TODO: Handle error.
+		}
+
+		err = doc.DataTo(&u)
+		if err != nil {
+			h.logger.Error(err)
+		}
+
+		var (
+			address = doc.Ref.ID
+			wallet  = database.Wallet{}
+		)
+
+		// Fetch the user's collections & NFTs from OpenSea
+		go h.asyncGetOpenSeaCollections(address, openseaCollectionsChan)
+		openseaCollections = <-openseaCollectionsChan
+		go h.asyncGetOpenSeaAssets(address, openseaAssetsChan)
+		openseaAssets = <-openseaAssetsChan
+
+		for _, collection := range openseaCollections {
+
+			wallet.Collections = append(wallet.Collections, database.WalletCollection{
+				Name:     collection.Name,
+				Slug:     collection.Slug,
+				ImageURL: collection.ImageURL,
+				NFTs:     h.getNFTsForCollection(collection.Slug, openseaAssets),
+				// TODO: Hydrate collection stats
+			})
+		}
+
+		// Update collections
+		wr, err := doc.Ref.Update(ctx, []firestore.Update{
+			{Path: "wallet", Value: wallet},
+		})
+
+		if err != nil {
+			h.logger.Error(err)
+		}
+
+		h.logger.Infow(
+			"Address updated",
+			"address", doc.Ref.ID,
+			"updated", wr.UpdateTime,
+		)
+	}
+
+	return true
+}
+
+// asyncGetOpenSeaCollections gets the collections from OpenSea
+func (h *Handler) asyncGetOpenSeaCollections(address string, rc chan []opensea.OpenSeaCollectionV2) {
+	collections, err := h.os.GetAllCollectionsForAddressV2(address)
+
+	if err != nil {
+		h.logger.Error(err)
+		return
+	}
+
+	rc <- collections
+}
+
+// asyncGetOpenSeaAssets gets the assets for the given address
+func (h *Handler) asyncGetOpenSeaAssets(address string, rc chan []opensea.OpenSeaAssetV2) {
+	assets, err := h.os.GetAllAssetsForAddressV2(address)
+
+	if err != nil {
+		h.logger.Error(err)
+		return
+	}
+
+	rc <- assets
+}
+
+func (h *Handler) getNFTsForCollection(collectionSlug string, assets []opensea.OpenSeaAssetV2) []database.WalletAsset {
+	var result []database.WalletAsset
+	for _, asset := range assets {
+		if asset.Collection.Slug == collectionSlug {
+			result = append(result, database.WalletAsset{
+				Name:     asset.Name,
+				TokenID:  asset.TokenID,
+				ImageURL: asset.ImageURL,
+			})
+		}
+	}
+	return result
 }

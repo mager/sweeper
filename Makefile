@@ -1,6 +1,6 @@
 
 dev:
-	go run main.go
+	go mod tidy && go run main.go
 
 test:
 	go test ./...

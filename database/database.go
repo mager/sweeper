@@ -55,6 +55,24 @@ type User struct {
 	IsWhale     bool     `firestore:"isWhale" json:"isWhale"`
 }
 
+type WalletCollection struct {
+	Name     string        `firestore:"name" json:"name"`
+	Slug     string        `firestore:"slug" json:"slug"`
+	ImageURL string        `firestore:"imageUrl" json:"imageUrl"`
+	NFTs     []WalletAsset `firestore:"nfts" json:"nfts"`
+}
+
+type WalletAsset struct {
+	Name     string `firestore:"name" json:"name"`
+	TokenID  string `firestore:"tokenId" json:"tokenId"`
+	ImageURL string `firestore:"imageUrl" json:"imageUrl"`
+	// TODO: Add Traits
+}
+
+type Wallet struct {
+	Collections []WalletCollection `firestore:"collections" json:"collections"`
+}
+
 // ProvideDB provides a firestore client
 func ProvideDB() *firestore.Client {
 	projectID := "floor-report-327113"
@@ -149,7 +167,7 @@ func AddCollectionToDB(
 ) (float64, bool) {
 	// Add collection to db
 	var (
-		c = CollectionV2{
+		c = Collection{
 			Updated: time.Now(),
 		}
 		floor float64
