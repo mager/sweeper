@@ -45,14 +45,21 @@ type CollectionV2 struct {
 }
 
 type User struct {
+	Name    string `firestore:"name" json:"name"`
+	Photo   bool   `firestore:"photo" json:"photo"`
+	ENSName string `firestore:"ensName" json:"ensName"`
+
+	// Following
 	Collections []string `firestore:"collections" json:"collections"`
-	ENSName     string   `firestore:"ensName" json:"ensName"`
-	Slug        string   `firestore:"slug" json:"slug"`
-	Name        string   `firestore:"name" json:"name"`
-	Photo       bool     `firestore:"photo" json:"photo"`
-	Twitter     string   `firestore:"twitter" json:"twitter"`
-	OpenSea     string   `firestore:"openSea" json:"openSea"`
-	IsWhale     bool     `firestore:"isWhale" json:"isWhale"`
+
+	// Socials
+	Slug    string `firestore:"slug" json:"slug"`
+	Twitter string `firestore:"twitter" json:"twitter"`
+	OpenSea string `firestore:"openSea" json:"openSea"`
+
+	// Settings
+	IsWhale     bool `firestore:"isWhale" json:"isWhale"`
+	ShouldIndex bool `firestore:"shouldIndex" json:"shouldIndex"`
 }
 
 type WalletCollection struct {
