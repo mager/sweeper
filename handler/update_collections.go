@@ -13,6 +13,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+type CollectionType string
+
 var (
 	CollectionTypeNew       CollectionType = "new"
 	CollectionTypeAll       CollectionType = "all"
@@ -62,8 +64,6 @@ var (
 		},
 	}
 )
-
-type CollectionType string
 
 type UpdateCollectionsReq struct {
 	CollectionType CollectionType `json:"collection_type"`

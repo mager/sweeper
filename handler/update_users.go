@@ -3,9 +3,11 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
+	"github.com/bwmarrin/discordgo"
 	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/opensea"
 	"google.golang.org/api/iterator"
@@ -57,6 +59,7 @@ func (h *Handler) updateAddresses() bool {
 		openseaAssets          = make([]opensea.OpenSeaAssetV2, 0)
 		openseaAssetsChan      = make(chan []opensea.OpenSeaAssetV2)
 		openseaCollectionsChan = make(chan []opensea.OpenSeaCollectionV2)
+		count                  = 0
 	)
 
 	// Fetch users from Firestore
@@ -109,7 +112,20 @@ func (h *Handler) updateAddresses() bool {
 			"address", doc.Ref.ID,
 			"updated", wr.UpdateTime,
 		)
+		count++
 	}
+
+	// Post to Discord
+	if count > 0 {
+		h.bot.ChannelMessageSendEmbed(
+			"920371422457659482",
+			&discordgo.MessageEmbed{
+				Title: fmt.Sprintf("Updated %d wallets", count),
+			},
+		)
+	}
+
+	h.logger.Infof("Updated %d addresses", count)
 
 	return true
 }
