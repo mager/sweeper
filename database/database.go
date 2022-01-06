@@ -49,6 +49,9 @@ type User struct {
 	Photo   bool   `firestore:"photo" json:"photo"`
 	ENSName string `firestore:"ensName" json:"ensName"`
 
+	// Wallet
+	Wallet Wallet `firestore:"wallet" json:"wallet"`
+
 	// Following
 	Collections []string `firestore:"collections" json:"collections"`
 
