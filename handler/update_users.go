@@ -27,6 +27,7 @@ var (
 
 type UpdateUsersReq struct {
 	UserType UserType `json:"user_type"`
+	DryRun   bool     `json:"dry_run"`
 }
 
 type UpdateUsersResp struct {
@@ -35,21 +36,22 @@ type UpdateUsersResp struct {
 
 func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 	var (
+		req  UpdateUsersReq
 		resp = UpdateUsersResp{}
 	)
 
-	// if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	resp.Success = h.updateAddresses()
+	resp.Success = h.updateAddresses(req.DryRun)
 
 	json.NewEncoder(w).Encode(resp)
 }
 
 // updateAddresses updates a single collection
-func (h *Handler) updateAddresses() bool {
+func (h *Handler) updateAddresses(dryRun bool) bool {
 	var (
 		ctx                    = context.Background()
 		collections            = h.database.Collection("users").Where("shouldIndex", "==", true)
@@ -94,35 +96,36 @@ func (h *Handler) updateAddresses() bool {
 				Slug:     collection.Slug,
 				ImageURL: collection.ImageURL,
 				NFTs:     h.getNFTsForCollection(collection.Slug, openseaAssets),
-				// TODO: Hydrate collection stats
 			})
 		}
 
 		// Update collections
-		wr, err := doc.Ref.Update(ctx, []firestore.Update{
-			{Path: "wallet", Value: wallet},
-		})
+		if !dryRun {
+			wr, err := doc.Ref.Update(ctx, []firestore.Update{
+				{Path: "wallet", Value: wallet},
+			})
 
-		if err != nil {
-			h.logger.Error(err)
+			if err != nil {
+				h.logger.Error(err)
+			}
+
+			h.logger.Infow(
+				"Address updated",
+				"address", doc.Ref.ID,
+				"updated", wr.UpdateTime,
+			)
+			count++
+
+			// Post to Discord
+			if count > 0 {
+				h.bot.ChannelMessageSendEmbed(
+					"920371422457659482",
+					&discordgo.MessageEmbed{
+						Title: fmt.Sprintf("Updated %d wallets", count),
+					},
+				)
+			}
 		}
-
-		h.logger.Infow(
-			"Address updated",
-			"address", doc.Ref.ID,
-			"updated", wr.UpdateTime,
-		)
-		count++
-	}
-
-	// Post to Discord
-	if count > 0 {
-		h.bot.ChannelMessageSendEmbed(
-			"920371422457659482",
-			&discordgo.MessageEmbed{
-				Title: fmt.Sprintf("Updated %d wallets", count),
-			},
-		)
 	}
 
 	h.logger.Infof("Updated %d addresses", count)

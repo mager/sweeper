@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	OpenSeaRateLimit     = 250 * time.Millisecond
 	OpenSeaNotFoundError = "collection_not_found"
 )
 
@@ -52,6 +53,7 @@ type OpenSeaCollectionV2 struct {
 	Name            string `json:"name"`
 	Slug            string `json:"slug"`
 	ImageURL        string `json:"image_url"`
+	Hidden          bool   `json:"hidden"`
 	OwnedAssetCount int    `json:"owned_asset_count"`
 }
 
@@ -65,7 +67,8 @@ type OpenSeaAssetV2 struct {
 
 // OpenSeaAssetV2Collection is an experiment
 type OpenSeaAssetV2Collection struct {
-	Slug string `json:"slug"`
+	Slug   string `json:"slug"`
+	Hidden bool   `json:"hidden"`
 }
 
 // OpenSeaCollectionStat represents an OpenSea collection stat object
@@ -149,6 +152,10 @@ type OpenSeaClient struct {
 	logger     *zap.SugaredLogger
 }
 
+var (
+	DEFAULT_LIMIT = 100
+)
+
 // ProvideOpenSea provides an HTTP client
 func ProvideOpenSea(cfg config.Config, logger *zap.SugaredLogger) OpenSeaClient {
 	tr := &http.Transport{
@@ -177,12 +184,11 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 	}
 	q := u.Query()
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("limit", fmt.Sprintf("%d", 50))
+	q.Set("limit", fmt.Sprintf("%d", 100))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
 	// Fetch collections
-	o.logger.Infow("Fetching collections from OpenSea", "address", address, "offset", offset)
 	req, err := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("X-API-KEY", o.apiKey)
 	if err != nil {
@@ -210,9 +216,11 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 		return []OpenSeaCollectionCollection{}, nil
 	}
 
+	o.logger.Info("Fetched collections from OpenSea", "address", address, "offset", offset, "count", len(openSeaCollections))
+
 	// TODO: Remove once OpenSea fixes rate limit
-	if offset > 50 {
-		time.Sleep(time.Millisecond * 200)
+	if offset > DEFAULT_LIMIT {
+		time.Sleep(OpenSeaRateLimit)
 	}
 
 	return openSeaCollections, nil
@@ -228,7 +236,7 @@ func (o *OpenSeaClient) GetCollectionsForAddressV2(address string, offset int) (
 	}
 	q := u.Query()
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("limit", fmt.Sprintf("%d", 50))
+	q.Set("limit", fmt.Sprintf("%d", 100))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
@@ -261,11 +269,19 @@ func (o *OpenSeaClient) GetCollectionsForAddressV2(address string, offset int) (
 	}
 
 	// TODO: Remove once OpenSea fixes rate limit
-	if offset > 50 {
-		time.Sleep(time.Millisecond * 250)
+	if offset >= DEFAULT_LIMIT {
+		time.Sleep(OpenSeaRateLimit)
 	}
 
-	return collections, nil
+	// Filter out hidden collections
+	var filtered = []OpenSeaCollectionV2{}
+	for _, collection := range collections {
+		if !collection.Hidden {
+			filtered = append(filtered, collection)
+		}
+	}
+
+	return filtered, nil
 }
 
 // GetCollectionStatsForSlug returns the stats for a collection
@@ -307,45 +323,10 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 	return stat.Stats, nil
 }
 
-// GetAssetsForAddress returns the assets for an address
-func (o *OpenSeaClient) GetAssetsForAddress(address string, offset int) ([]OpenSeaAsset, error) {
-	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=50", offset))
-	if err != nil {
-		o.logger.Error(err)
-		return []OpenSeaAsset{}, nil
-	}
-	q := u.Query()
-	q.Set("owner", address)
-	u.RawQuery = q.Encode()
-
-	// Fetch assets
-	req, err := http.NewRequest("GET", u.String(), nil)
-	req.Header.Set("X-API-KEY", o.apiKey)
-	if err != nil {
-		o.logger.Error(err)
-		return []OpenSeaAsset{}, nil
-	}
-	resp, err := o.httpClient.Do(req)
-	if err != nil {
-		o.logger.Error(err)
-		return []OpenSeaAsset{}, nil
-	}
-	defer resp.Body.Close()
-
-	var openSeaGetAssetsResp OpenSeaGetAssetsResp
-	err = json.NewDecoder(resp.Body).Decode(&openSeaGetAssetsResp)
-	if err != nil {
-		o.logger.Error(err)
-		return []OpenSeaAsset{}, nil
-	}
-
-	return openSeaGetAssetsResp.Assets, nil
-}
-
 // GetAssetsForAddressV2 returns the assets for an address
 func (o *OpenSeaClient) GetAssetsForAddressV2(address string, offset int) ([]OpenSeaAssetV2, error) {
 	var assets = []OpenSeaAssetV2{}
-	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=50", offset))
+	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=%d", offset, DEFAULT_LIMIT))
 	if err != nil {
 		o.logger.Error(err)
 		return assets, nil
@@ -375,7 +356,15 @@ func (o *OpenSeaClient) GetAssetsForAddressV2(address string, offset int) ([]Ope
 		return assets, nil
 	}
 
-	return openSeaGetAssetsResp.Assets, nil
+	// Filter out assets with hidden collections
+	var filtered = []OpenSeaAssetV2{}
+	for _, asset := range openSeaGetAssetsResp.Assets {
+		if !asset.Collection.Hidden {
+			filtered = append(filtered, asset)
+		}
+	}
+
+	return filtered, nil
 }
 
 func (o *OpenSeaClient) GetAllCollectionsForAddress(address string) ([]OpenSeaCollectionCollection, error) {
@@ -390,7 +379,7 @@ func (o *OpenSeaClient) GetAllCollectionsForAddress(address string) ([]OpenSeaCo
 			break
 		}
 		allCollections = append(allCollections, collections...)
-		offset += 50
+		offset += DEFAULT_LIMIT
 	}
 
 	o.logger.Infow("Found collections from OpenSea", "address", address, "count", len(allCollections))
@@ -412,51 +401,11 @@ func (o *OpenSeaClient) GetAllCollectionsForAddressV2(address string) ([]OpenSea
 			break
 		}
 		allCollections = append(allCollections, collections...)
-		offset += 50
+		offset += DEFAULT_LIMIT
 	}
 
 	o.logger.Infow("Found collections from OpenSea", "address", address, "count", len(allCollections))
 	return allCollections, nil
-}
-
-// GetAllAssetsForAddress returns the assets for an address
-func (o *OpenSeaClient) GetAllAssetsForAddress(address string) ([]OpenSeaAsset, error) {
-	var assets []OpenSeaAsset
-	// TODO: Fetch more than 250 and clean this up a lot
-	first50, err := o.GetAssetsForAddress(address, 0)
-	if err != nil {
-		return assets, err
-	}
-	assets = append(assets, first50...)
-	if len(assets) == 50 {
-		second50, err := o.GetAssetsForAddress(address, 50)
-		if err != nil {
-			return assets, err
-		}
-		assets = append(assets, second50...)
-	}
-	if len(assets) == 100 {
-		third50, err := o.GetAssetsForAddress(address, 100)
-		if err != nil {
-			return assets, err
-		}
-		assets = append(assets, third50...)
-	}
-	if len(assets) == 150 {
-		fourth50, err := o.GetAssetsForAddress(address, 150)
-		if err != nil {
-			return assets, err
-		}
-		assets = append(assets, fourth50...)
-	}
-	if len(assets) == 200 {
-		fifth50, err := o.GetAssetsForAddress(address, 200)
-		if err != nil {
-			return assets, err
-		}
-		assets = append(assets, fifth50...)
-	}
-	return assets, nil
 }
 
 // GetAllAssetsForAddressV2 returns the assets for an address
@@ -477,7 +426,7 @@ func (o *OpenSeaClient) GetAllAssetsForAddressV2(address string) ([]OpenSeaAsset
 		}
 
 		allAssets = append(allAssets, assets...)
-		offset += 50
+		offset += DEFAULT_LIMIT
 	}
 
 	o.logger.Infow("Found assets from OpenSea", "address", address, "count", len(allAssets))
