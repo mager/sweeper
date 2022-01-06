@@ -115,16 +115,17 @@ func (h *Handler) updateAddresses(dryRun bool) bool {
 			)
 			count++
 
-			// Post to Discord
-			if count > 0 {
-				h.bot.ChannelMessageSendEmbed(
-					"920371422457659482",
-					&discordgo.MessageEmbed{
-						Title: fmt.Sprintf("Updated %d wallets", count),
-					},
-				)
-			}
 		}
+	}
+
+	// Post to Discord
+	if !dryRun && count > 0 {
+		h.bot.ChannelMessageSendEmbed(
+			"920371422457659482",
+			&discordgo.MessageEmbed{
+				Title: fmt.Sprintf("Updated %d wallets", count),
+			},
+		)
 	}
 
 	h.logger.Infof("Updated %d addresses", count)
