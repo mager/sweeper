@@ -89,7 +89,6 @@ func (h *Handler) updateAddresses(dryRun bool) bool {
 		openseaCollections = <-openseaCollectionsChan
 		go h.asyncGetOpenSeaAssets(address, openseaAssetsChan)
 		openseaAssets = <-openseaAssetsChan
-
 		for _, collection := range openseaCollections {
 			wallet.Collections = append(wallet.Collections, database.WalletCollection{
 				Name:     collection.Name,

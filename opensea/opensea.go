@@ -326,7 +326,7 @@ func (o *OpenSeaClient) GetCollectionStatsForSlug(slug string) (OpenSeaCollectio
 // GetAssetsForAddressV2 returns the assets for an address
 func (o *OpenSeaClient) GetAssetsForAddressV2(address string, offset int) ([]OpenSeaAssetV2, error) {
 	var assets = []OpenSeaAssetV2{}
-	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=%d", offset, DEFAULT_LIMIT))
+	u, err := url.Parse(fmt.Sprintf("https://api.opensea.io/api/v1/assets?&offset=%d&limit=50", offset))
 	if err != nil {
 		o.logger.Error(err)
 		return assets, nil
@@ -357,14 +357,14 @@ func (o *OpenSeaClient) GetAssetsForAddressV2(address string, offset int) ([]Ope
 	}
 
 	// Filter out assets with hidden collections
-	var filtered = []OpenSeaAssetV2{}
-	for _, asset := range openSeaGetAssetsResp.Assets {
-		if !asset.Collection.Hidden {
-			filtered = append(filtered, asset)
-		}
-	}
+	// var filtered = []OpenSeaAssetV2{}
+	// for _, asset := range openSeaGetAssetsResp.Assets {
+	// 	if !asset.Collection.Hidden {
+	// 		filtered = append(filtered, asset)
+	// 	}
+	// }
 
-	return filtered, nil
+	return openSeaGetAssetsResp.Assets, nil
 }
 
 func (o *OpenSeaClient) GetAllCollectionsForAddress(address string) ([]OpenSeaCollectionCollection, error) {
