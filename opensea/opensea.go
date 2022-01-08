@@ -67,8 +67,10 @@ type OpenSeaAssetV2 struct {
 
 // OpenSeaAssetV2Collection is an experiment
 type OpenSeaAssetV2Collection struct {
-	Slug   string `json:"slug"`
-	Hidden bool   `json:"hidden"`
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	ImageURL string `json:"image_url"`
+	Hidden   bool   `json:"hidden"`
 }
 
 // OpenSeaCollectionStat represents an OpenSea collection stat object
@@ -133,7 +135,10 @@ type OpenSeaUser struct {
 
 // OpenSeaAssetCollection represents a collection inside an OpenSea asset
 type OpenSeaAssetCollection struct {
-	Slug string `json:"slug"`
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	ImageURL string `json:"image_url"`
+	Hidden   bool   `json:"hidden"`
 }
 
 type OpenSeaAssetTrait struct {
@@ -153,7 +158,7 @@ type OpenSeaClient struct {
 }
 
 var (
-	DEFAULT_LIMIT = 100
+	DEFAULT_LIMIT = 50
 )
 
 // ProvideOpenSea provides an HTTP client
@@ -184,7 +189,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 	}
 	q := u.Query()
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("limit", fmt.Sprintf("%d", 100))
+	q.Set("limit", fmt.Sprintf("%d", 50))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
@@ -236,7 +241,7 @@ func (o *OpenSeaClient) GetCollectionsForAddressV2(address string, offset int) (
 	}
 	q := u.Query()
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("limit", fmt.Sprintf("%d", 100))
+	q.Set("limit", fmt.Sprintf("%d", 50))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
@@ -425,11 +430,11 @@ func (o *OpenSeaClient) GetAllAssetsForAddressV2(address string) ([]OpenSeaAsset
 			break
 		}
 
+		o.logger.Infow("Found assets from OpenSea", "address", address, "offset", offset, "len", len(allAssets))
+
 		allAssets = append(allAssets, assets...)
 		offset += DEFAULT_LIMIT
 	}
-
-	o.logger.Infow("Found assets from OpenSea", "address", address, "count", len(allAssets))
 
 	return allAssets, nil
 }
