@@ -50,7 +50,7 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// updateAddresses updates a single collection
+// updateAddresses updates a collection of addresses
 func (h *Handler) updateAddresses(dryRun bool) bool {
 	var (
 		ctx                    = context.Background()

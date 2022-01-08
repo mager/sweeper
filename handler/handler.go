@@ -58,6 +58,8 @@ func (h *Handler) registerRoutes() {
 	// Update users
 	h.router.HandleFunc("/update/users", h.updateUsers).
 		Methods("POST")
+	h.router.HandleFunc("/update/user", h.updateUser).
+		Methods("POST")
 }
 
 // asyncGetOpenSeaCollections gets the collections from OpenSea

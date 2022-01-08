@@ -153,7 +153,7 @@ type OpenSeaClient struct {
 }
 
 var (
-	DEFAULT_LIMIT = 100
+	DEFAULT_LIMIT = 50
 )
 
 // ProvideOpenSea provides an HTTP client
@@ -184,7 +184,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 	}
 	q := u.Query()
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("limit", fmt.Sprintf("%d", 100))
+	q.Set("limit", fmt.Sprintf("%d", 50))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
@@ -236,7 +236,7 @@ func (o *OpenSeaClient) GetCollectionsForAddressV2(address string, offset int) (
 	}
 	q := u.Query()
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("limit", fmt.Sprintf("%d", 100))
+	q.Set("limit", fmt.Sprintf("%d", 50))
 	q.Set("asset_owner", address)
 	u.RawQuery = q.Encode()
 
