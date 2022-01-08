@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mager/sweeper/database"
@@ -93,7 +94,31 @@ func (h *Handler) updateAddress(dryRun bool, address string) bool {
 			"address", docsnap.Ref.ID,
 			"updated", wr.UpdateTime,
 		)
+	}
 
+	// Make sure the collections exist in our database
+
+	var (
+		collectionSlugDocs    = make([]*firestore.DocumentRef, 0)
+		slugToOSCollectionMap = make(map[string]database.WalletCollection)
+		// collectionMap         = make(map[string]database.Collection)
+	)
+
+	for _, collection := range wallet.Collections {
+		collectionSlugDocs = append(collectionSlugDocs, h.database.Collection("collections").Doc(collection.Slug))
+		slugToOSCollectionMap[collection.Slug] = collection
+	}
+
+	docsnaps, err := h.database.GetAll(h.ctx, collectionSlugDocs)
+	if err != nil {
+		h.logger.Error(err)
+	}
+
+	for _, docsnap := range docsnaps {
+		if !docsnap.Exists() {
+			database.AddCollectionToDB(h.ctx, &h.os, h.logger, h.database, docsnap.Ref.ID)
+			time.Sleep(time.Millisecond * 250)
+		}
 	}
 
 	return true
