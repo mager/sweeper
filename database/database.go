@@ -129,7 +129,7 @@ func UpdateCollectionStats(
 		updated      bool
 	)
 
-	if collection.Collection.Slug != "" && floor >= 0.01 {
+	if collection.Collection.Slug != "" && floor >= 0.005 {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
 
 		// Update collection
@@ -160,7 +160,7 @@ func UpdateCollectionStats(
 
 		updated = true
 	} else {
-		logger.Infow("Floor below 0.01", "collection", docID, "floor", floor)
+		logger.Infow("Floor below 0.005", "collection", docID, "floor", floor)
 	}
 
 	time.Sleep(time.Millisecond * 500)
@@ -192,7 +192,7 @@ func AddCollectionToDB(
 		logger.Error(err)
 		return floor, false
 	}
-	if stat.FloorPrice >= 0.01 {
+	if stat.FloorPrice >= 0.005 {
 		c.Floor = stat.FloorPrice
 		c.MarketCap = stat.MarketCap
 		c.NumOwners = stat.NumOwners
