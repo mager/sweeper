@@ -44,13 +44,13 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp.Success = h.doUpdateAddresses(req.DryRun, "")
+	resp.Success = h.doUpdateAddresses()
 
 	json.NewEncoder(w).Encode(resp)
 }
 
 // doUpdateAddresses updates a collection of addresses
-func (h *Handler) doUpdateAddresses(dryRun bool, address string) bool {
+func (h *Handler) doUpdateAddresses() bool {
 	var (
 		ctx         = context.Background()
 		collections = h.database.Collection("users").Where("shouldIndex", "==", true)
@@ -98,20 +98,17 @@ func (h *Handler) doUpdateAddresses(dryRun bool, address string) bool {
 func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.DocumentSnapshot) bool {
 
 	var (
-		address = doc.Ref.ID
-		// wallet            = database.Wallet{}
-		openseaAssets     = make([]opensea.OpenSeaAssetV2, 0)
-		openseaAssetsChan = make(chan []opensea.OpenSeaAssetV2)
-		collectionsMap    = make(map[string]database.WalletCollection)
+		address        = doc.Ref.ID
+		openseaAssets  = make([]opensea.OpenSeaAssetV2, 0)
+		collectionsMap = make(map[string]database.WalletCollection)
 	)
 
 	// Fetch the user's collections & NFTs from OpenSea
-	go h.asyncGetOpenSeaAssets(address, openseaAssetsChan)
-	openseaAssets = <-openseaAssetsChan
+	openseaAssets = h.getOpenSeaAssets(address)
 
 	// Create a list of wallet collections
 	for _, asset := range openseaAssets {
-		// If we do have a collection for this asset, add it to it
+		// If we do have a collection for this asset, add to it
 		if _, ok := collectionsMap[asset.Collection.Slug]; ok {
 			w := collectionsMap[asset.Collection.Slug]
 			w.NFTs = append(w.NFTs, database.WalletAsset{
@@ -142,6 +139,12 @@ func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.Docu
 	for _, collection := range collectionsMap {
 		collections = append(collections, collection)
 	}
+
+	if len(collections) == 0 {
+		h.logger.Info("No collections found for user", address)
+		return false
+	}
+
 	wallet := database.Wallet{
 		Collections: collections,
 	}

@@ -224,9 +224,7 @@ func (o *OpenSeaClient) GetCollectionsForAddress(address string, offset int) ([]
 	o.logger.Info("Fetched collections from OpenSea", "address", address, "offset", offset, "count", len(openSeaCollections))
 
 	// TODO: Remove once OpenSea fixes rate limit
-	if offset > DEFAULT_LIMIT {
-		time.Sleep(OpenSeaRateLimit)
-	}
+	time.Sleep(OpenSeaRateLimit)
 
 	return openSeaCollections, nil
 }
@@ -274,9 +272,7 @@ func (o *OpenSeaClient) GetCollectionsForAddressV2(address string, offset int) (
 	}
 
 	// TODO: Remove once OpenSea fixes rate limit
-	if offset >= DEFAULT_LIMIT {
-		time.Sleep(OpenSeaRateLimit)
-	}
+	time.Sleep(OpenSeaRateLimit)
 
 	// Filter out hidden collections
 	var filtered = []OpenSeaCollectionV2{}

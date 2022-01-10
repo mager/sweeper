@@ -74,16 +74,15 @@ func (h *Handler) asyncGetOpenSeaCollections(address string, rc chan []opensea.O
 	rc <- collections
 }
 
-// asyncGetOpenSeaAssets gets the assets for the given address
-func (h *Handler) asyncGetOpenSeaAssets(address string, rc chan []opensea.OpenSeaAssetV2) {
+// getOpenSeaAssets gets the assets for the given address
+func (h *Handler) getOpenSeaAssets(address string) []opensea.OpenSeaAssetV2 {
 	assets, err := h.os.GetAllAssetsForAddressV2(address)
 
 	if err != nil {
 		h.logger.Error(err)
-		return
 	}
 
-	rc <- assets
+	return assets
 }
 
 func (h *Handler) getNFTsForCollection(collectionSlug string, assets []opensea.OpenSeaAssetV2) []database.WalletAsset {
