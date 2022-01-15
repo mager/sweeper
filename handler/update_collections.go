@@ -68,6 +68,7 @@ var (
 type UpdateCollectionsReq struct {
 	CollectionType CollectionType `json:"collection_type"`
 	Slug           string         `json:"slug"`
+	Slugs          []string       `json:"slugs"`
 }
 
 type UpdateCollectionsResp struct {
@@ -82,6 +83,13 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Update multiple collections by slug
+	if len(req.Slugs) > 0 {
+		resp.Success = h.updateCollectionsBySlugs(req, &resp)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
@@ -144,6 +152,30 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 	)
 
 	return updated
+}
+
+// updateCollectionsBySlugs updates a single collection
+func (h *Handler) updateCollectionsBySlugs(req UpdateCollectionsReq, resp *UpdateCollectionsResp) bool {
+	var (
+		slugs              = req.Slugs
+		updatedCollections int
+	)
+
+	for _, slug := range slugs {
+		_, updated := database.AddCollectionToDB(h.ctx, &h.os, h.logger, h.database, slug)
+		time.Sleep(time.Millisecond * 250)
+		if updated {
+			updatedCollections++
+		}
+
+	}
+
+	h.logger.Infow(
+		"Collections updated",
+		"slugs", slugs,
+	)
+
+	return len(slugs) == updatedCollections
 }
 
 // updateCollectionsByType updates the collections in the database based on a custom config
