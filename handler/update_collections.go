@@ -40,7 +40,7 @@ var (
 			queryCond: Condition{
 				path:  "updated",
 				op:    "<",
-				value: time.Now().Add(-2 * time.Hour),
+				value: time.Now().Add(-4 * time.Hour),
 			},
 			updateCond: Condition{
 				path:  "7d",
@@ -192,9 +192,9 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 
 	var (
 		collections = h.database.Collection("collections")
-		iter        = collections.Documents(h.ctx)
 		count       = 0
 		slugs       = make([]string, 0)
+		iter        *firestore.DocumentIterator
 	)
 
 	if c.queryCond.path != "" {
