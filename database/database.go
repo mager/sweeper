@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"github.com/kr/pretty"
 	bq "github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
@@ -30,18 +31,19 @@ type Collection struct {
 
 // TODO: Delete
 type CollectionV2 struct {
-	Name            string    `firestore:"name" json:"name"`
-	Thumb           string    `firestore:"thumb" json:"thumb"`
-	Floor           float64   `firestore:"floor" json:"floor"`
-	Slug            string    `firestore:"slug" json:"slug"`
-	OneDayVolume    float64   `firestore:"1d" json:"1d"`
-	SevenDayVolume  float64   `firestore:"7d" json:"7d"`
-	ThirtyDayVolume float64   `firestore:"30d" json:"30d"`
-	MarketCap       float64   `firestore:"cap" json:"cap"`
-	TotalSupply     float64   `firestore:"supply" json:"supply"`
-	NumOwners       int       `firestore:"num" json:"num"`
-	TotalSales      float64   `firestore:"sales" json:"sales"`
-	Updated         time.Time `firestore:"updated" json:"updated"`
+	Name            string  `firestore:"name" json:"name"`
+	Thumb           string  `firestore:"thumb" json:"thumb"`
+	Floor           float64 `firestore:"floor" json:"floor"`
+	Slug            string  `firestore:"slug" json:"slug"`
+	OneDayVolume    float64 `firestore:"1d" json:"1d"`
+	SevenDayVolume  float64 `firestore:"7d" json:"7d"`
+	ThirtyDayVolume float64 `firestore:"30d" json:"30d"`
+	MarketCap       float64 `firestore:"cap" json:"cap"`
+	TotalSupply     float64 `firestore:"supply" json:"supply"`
+	NumOwners       int     `firestore:"num" json:"num"`
+	TotalSales      float64 `firestore:"sales" json:"sales"`
+	// Traits          []Trait   `firestore:"traits" json:"traits"`
+	Updated time.Time `firestore:"updated" json:"updated"`
 }
 
 type User struct {
@@ -76,7 +78,11 @@ type WalletAsset struct {
 	Name     string `firestore:"name" json:"name"`
 	TokenID  string `firestore:"tokenId" json:"tokenId"`
 	ImageURL string `firestore:"imageUrl" json:"imageUrl"`
-	// TODO: Add Traits
+}
+
+type Trait struct {
+	TraitType string `firestore:"traitType" json:"traitType"`
+	Value     string `firestore:"value" json:"value"`
 }
 
 type Wallet struct {
@@ -131,7 +137,7 @@ func UpdateCollectionStats(
 
 	if collection.Collection.Slug != "" && floor >= 0.005 {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
-
+		pretty.Print(collection)
 		// Update collection
 		_, err := doc.Ref.Update(ctx, []firestore.Update{
 			{Path: "1d", Value: utils.RoundFloat(oneDayVol, 3)},
@@ -143,6 +149,7 @@ func UpdateCollectionStats(
 			{Path: "sales", Value: utils.RoundFloat(totalSales, 3)},
 			{Path: "supply", Value: utils.RoundFloat(totalSupply, 3)},
 			{Path: "thumb", Value: collection.Collection.ImageURL},
+			// {Path: "traits", Value: collection.Collection.Traits},
 			{Path: "updated", Value: now},
 		})
 		if err != nil {

@@ -2,25 +2,29 @@ package handler
 
 import (
 	"context"
+	"net/http"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
-	"github.com/bwmarrin/discordgo"
 	"github.com/gorilla/mux"
 	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/opensea"
+	"github.com/mager/sweeper/reservoir"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 // Handler struct for HTTP requests
 type Handler struct {
-	ctx      context.Context
-	router   *mux.Router
-	logger   *zap.SugaredLogger
-	os       opensea.OpenSeaClient
-	database *firestore.Client
-	bq       *bigquery.Client
-	bot      *discordgo.Session
+	fx.In
+
+	Context   context.Context
+	Router    *mux.Router
+	Logger    *zap.SugaredLogger
+	OpenSea   opensea.OpenSeaClient
+	Database  *firestore.Client
+	BigQuery  *bigquery.Client
+	Reservoir *reservoir.ReservoirClient
 }
 
 type Condition struct {
@@ -36,16 +40,7 @@ type Config struct {
 }
 
 // New creates a Handler struct
-func New(
-	ctx context.Context,
-	router *mux.Router,
-	logger *zap.SugaredLogger,
-	os opensea.OpenSeaClient,
-	database *firestore.Client,
-	bq *bigquery.Client,
-	bot *discordgo.Session,
-) *Handler {
-	h := Handler{ctx, router, logger, os, database, bq, bot}
+func New(h Handler) *Handler {
 	h.registerRoutes()
 	return &h
 }
@@ -53,21 +48,28 @@ func New(
 // RegisterRoutes registers all the routes for the route handler
 func (h *Handler) registerRoutes() {
 	// Update collections
-	h.router.HandleFunc("/update/collections", h.updateCollections).
+	h.Router.HandleFunc("/update/collections", h.updateCollections).
 		Methods("POST")
 	// Update users
-	h.router.HandleFunc("/update/users", h.updateUsers).
+	h.Router.HandleFunc("/update/users", h.updateUsers).
 		Methods("POST")
-	h.router.HandleFunc("/update/user", h.updateUser).
+	h.Router.HandleFunc("/update/user", h.updateUser).
 		Methods("POST")
+	h.Router.HandleFunc("/health", h.health).
+		Methods("GET")
+}
+
+func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Info("Health check")
+	w.WriteHeader(http.StatusOK)
 }
 
 // asyncGetOpenSeaCollections gets the collections from OpenSea
 func (h *Handler) asyncGetOpenSeaCollections(address string, rc chan []opensea.OpenSeaCollectionV2) {
-	collections, err := h.os.GetAllCollectionsForAddressV2(address)
+	collections, err := h.OpenSea.GetAllCollectionsForAddressV2(address)
 
 	if err != nil {
-		h.logger.Error(err)
+		h.Logger.Error(err)
 		return
 	}
 
@@ -76,10 +78,10 @@ func (h *Handler) asyncGetOpenSeaCollections(address string, rc chan []opensea.O
 
 // getOpenSeaAssets gets the assets for the given address
 func (h *Handler) getOpenSeaAssets(address string) []opensea.OpenSeaAssetV2 {
-	assets, err := h.os.GetAllAssetsForAddressV2(address)
+	assets, err := h.OpenSea.GetAllAssetsForAddressV2(address)
 
 	if err != nil {
-		h.logger.Error(err)
+		h.Logger.Error(err)
 	}
 
 	return assets

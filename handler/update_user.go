@@ -28,6 +28,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.Logger.Infow("Updating user address", "address", req.Address)
 	resp.Success = h.doUpdateAddress(req.DryRun, req.Address)
 
 	json.NewEncoder(w).Encode(resp)
@@ -40,19 +41,20 @@ func (h *Handler) doUpdateAddress(dryRun bool, address string) bool {
 		u   database.User
 	)
 
-	docsnap, err := h.database.Collection("users").Doc(address).Get(h.ctx)
+	h.Logger.Info("Updating address", "address", address)
+	docsnap, err := h.Database.Collection("users").Doc(address).Get(h.Context)
 
 	if err != nil {
-		h.logger.Errorf("Error getting user: %v", err)
+		h.Logger.Errorf("Error getting user: %v", err)
 		return false
 	}
 
 	err = docsnap.DataTo(&u)
 	if err != nil {
-		h.logger.Error(err)
+		h.Logger.Error(err)
 	}
 
-	h.updateSingleAddressV2(ctx, docsnap)
+	h.updateSingleAddress(ctx, docsnap)
 
 	return true
 }

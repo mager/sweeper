@@ -34,6 +34,7 @@ type OpenSeaCollection struct {
 	Slug     string                `json:"slug"`
 	ImageURL string                `json:"image_url"`
 	Stats    OpenSeaCollectionStat `json:"stats"`
+	// Traits   []OpenSeaCollectionTrait `json:"traits"`
 }
 
 // OpenSeaCollectionCollection represents an OpenSea collection and also the response from
@@ -55,6 +56,7 @@ type OpenSeaCollectionV2 struct {
 	ImageURL        string `json:"image_url"`
 	Hidden          bool   `json:"hidden"`
 	OwnedAssetCount int    `json:"owned_asset_count"`
+	// Traits          []OpenSeaCollectionTrait `json:"traits"`
 }
 
 // OpenSeaAssetV2 is an experiment
@@ -71,6 +73,7 @@ type OpenSeaAssetV2Collection struct {
 	Name     string `json:"name"`
 	ImageURL string `json:"image_url"`
 	Hidden   bool   `json:"hidden"`
+	// Traits   []OpenSeaCollectionTrait `json:"traits"`
 }
 
 // OpenSeaCollectionStat represents an OpenSea collection stat object
@@ -115,13 +118,13 @@ type OpenSeaGetAssetsRespV2 struct {
 
 // OpenSeaAsset represents an asset on OpenSea
 type OpenSeaAsset struct {
-	Name              string                 `json:"name"`
-	AssetContract     OpenSeaAssetContract   `json:"asset_contract"`
-	TokenID           string                 `json:"token_id"`
-	ImageThumbnailURL string                 `json:"image_thumbnail_url"`
-	Traits            []OpenSeaAssetTrait    `json:"traits"`
-	Collection        OpenSeaAssetCollection `json:"collection"`
-	Owner             OpenSeaOwner           `json:"owner"`
+	Name              string               `json:"name"`
+	AssetContract     OpenSeaAssetContract `json:"asset_contract"`
+	TokenID           string               `json:"token_id"`
+	ImageThumbnailURL string               `json:"image_thumbnail_url"`
+	// Traits            []OpenSeaCollectionTrait `json:"traits"`
+	Collection OpenSeaAssetCollection `json:"collection"`
+	Owner      OpenSeaOwner           `json:"owner"`
 }
 
 type OpenSeaOwner struct {
@@ -141,7 +144,7 @@ type OpenSeaAssetCollection struct {
 	Hidden   bool   `json:"hidden"`
 }
 
-type OpenSeaAssetTrait struct {
+type OpenSeaCollectionTrait struct {
 	TraitType string      `json:"trait_type"`
 	Value     interface{} `json:"value"`
 }

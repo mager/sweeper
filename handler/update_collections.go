@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"github.com/bwmarrin/discordgo"
 	"github.com/mager/sweeper/database"
 	"google.golang.org/api/iterator"
 )
@@ -109,47 +107,42 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 // updateSingleCollection updates a single collection
 func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) bool {
 	var (
-		collections = h.database.Collection("collections")
-		iter        = collections.Where("slug", "==", req.Slug).Documents(h.ctx)
-		err         error
-		floor       float64
-		updated     bool
+		err     error
+		floor   float64
+		updated bool
 	)
 
-	// Fetch collection from Firestore
-	doc, err := iter.Next()
+	docsnap, err := h.Database.Collection("collections").Doc(req.Slug).Get(h.Context)
+
 	if err != nil {
-		h.logger.Errorw(
+		h.Logger.Errorw(
 			"Error fetching collection from Firestore",
 			"err", err,
 		)
-
-		// Add the collection if it doesn't exist
-		if err == iterator.Done {
-			floor, updated = database.AddCollectionToDB(h.ctx, &h.os, h.logger, h.database, req.Slug)
-
-			h.logger.Infow(
-				"Collection added",
-				"collection", req.Slug,
-				"floor", floor,
-				"updated", updated,
-			)
-
-			return updated
-		}
-
 		return updated
 	}
 
-	// Update collection
-	floor, updated = database.UpdateCollectionStats(h.ctx, &h.os, h.bq, h.logger, doc)
+	if docsnap.Exists() {
+		// Update collection
+		floor, updated = database.UpdateCollectionStats(h.Context, &h.OpenSea, h.BigQuery, h.Logger, docsnap)
+		h.Logger.Infow(
+			"Collection updated",
+			"collection", docsnap.Ref.ID,
+			"floor", floor,
+			"updated", updated,
+		)
+	} else {
+		// Add collection
+		floor, updated = database.AddCollectionToDB(h.Context, &h.OpenSea, h.Logger, h.Database, req.Slug)
+		h.Logger.Infow(
+			"Collection added",
+			"collection", req.Slug,
+			"floor", floor,
+			"updated", updated,
+		)
+	}
 
-	h.logger.Infow(
-		"Collection updated",
-		"collection", doc.Ref.ID,
-		"floor", floor,
-		"updated", updated,
-	)
+	updated = true
 
 	return updated
 }
@@ -162,7 +155,7 @@ func (h *Handler) updateCollectionsBySlugs(req UpdateCollectionsReq, resp *Updat
 	)
 
 	for _, slug := range slugs {
-		_, updated := database.AddCollectionToDB(h.ctx, &h.os, h.logger, h.database, slug)
+		_, updated := database.AddCollectionToDB(h.Context, &h.OpenSea, h.Logger, h.Database, slug)
 		time.Sleep(time.Millisecond * 250)
 		if updated {
 			updatedCollections++
@@ -170,7 +163,7 @@ func (h *Handler) updateCollectionsBySlugs(req UpdateCollectionsReq, resp *Updat
 
 	}
 
-	h.logger.Infow(
+	h.Logger.Infow(
 		"Collections updated",
 		"slugs", slugs,
 	)
@@ -184,23 +177,23 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 	c, found := UpdateCollectionsConfig[collectionType]
 
 	if !found {
-		h.logger.Errorf("Invalid collection type: %s", collectionType)
+		h.Logger.Errorf("Invalid collection type: %s", collectionType)
 		return false
 	}
 
-	h.logger.Info(c.log)
+	h.Logger.Info(c.log)
 
 	var (
-		collections = h.database.Collection("collections")
+		collections = h.Database.Collection("collections")
 		count       = 0
 		slugs       = make([]string, 0)
 		iter        *firestore.DocumentIterator
 	)
 
 	if c.queryCond.path != "" {
-		iter = collections.Where(c.queryCond.path, c.queryCond.op, c.queryCond.value).Documents(h.ctx)
+		iter = collections.Where(c.queryCond.path, c.queryCond.op, c.queryCond.value).Documents(h.Context)
 	} else {
-		iter = collections.Documents(h.ctx)
+		iter = collections.Documents(h.Context)
 	}
 
 	defer iter.Stop()
@@ -212,7 +205,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		}
 		if err != nil {
 			// TODO: Handle error.
-			h.logger.Error(err)
+			h.Logger.Error(err)
 		}
 
 		// Update the floor price
@@ -221,10 +214,10 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 			if c.updateCond.op == "<" {
 				if doc.Data()[c.updateCond.path].(float64) < c.updateCond.value.(float64) {
 					_, updated = database.UpdateCollectionStats(
-						h.ctx,
-						&h.os,
-						h.bq,
-						h.logger,
+						h.Context,
+						&h.OpenSea,
+						h.BigQuery,
+						h.Logger,
 						doc,
 					)
 				} else {
@@ -233,10 +226,10 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 			} else if c.updateCond.op == ">" {
 				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
 					_, updated = database.UpdateCollectionStats(
-						h.ctx,
-						&h.os,
-						h.bq,
-						h.logger,
+						h.Context,
+						&h.OpenSea,
+						h.BigQuery,
+						h.Logger,
 						doc,
 					)
 				} else {
@@ -245,10 +238,10 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 			}
 		} else {
 			_, updated = database.UpdateCollectionStats(
-				h.ctx,
-				&h.os,
-				h.bq,
-				h.logger,
+				h.Context,
+				&h.OpenSea,
+				h.BigQuery,
+				h.Logger,
 				doc,
 			)
 		}
@@ -263,31 +256,13 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		}
 	}
 
-	// Post to Discord
-	if count > 0 {
-		h.bot.ChannelMessageSendEmbed(
-			"920371422457659482",
-			&discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("Updated %d collections", count),
-				Description: c.desc,
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:   "Slugs",
-						Value:  strings.Join(slugs, ", "),
-						Inline: true,
-					},
-				},
-			},
-		)
-	}
-
-	h.logger.Infof("Updated %d collections", count)
+	h.Logger.Infof("Updated %d collections", count)
 
 	return true
 }
 
 func (h *Handler) logNoUpdate(doc *firestore.DocumentSnapshot, c Config) {
-	h.logger.Infow(
+	h.Logger.Infow(
 		"Floor not updated",
 		"collection", doc.Ref.ID,
 		"cond", fmt.Sprintf(

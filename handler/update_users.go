@@ -53,8 +53,8 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) doUpdateAddresses() bool {
 	var (
 		ctx         = context.Background()
-		collections = h.database.Collection("users").Where("shouldIndex", "==", true)
-		iter        = collections.Documents(h.ctx)
+		collections = h.Database.Collection("users").Where("shouldIndex", "==", true)
+		iter        = collections.Documents(h.Context)
 		u           database.User
 		count       = 0
 	)
@@ -66,15 +66,15 @@ func (h *Handler) doUpdateAddresses() bool {
 			break
 		}
 		if err != nil {
-			h.logger.Error(err)
+			h.Logger.Error(err)
 		}
 
 		err = doc.DataTo(&u)
 		if err != nil {
-			h.logger.Error(err)
+			h.Logger.Error(err)
 		}
 
-		updated := h.updateSingleAddressV2(ctx, doc)
+		updated := h.updateSingleAddress(ctx, doc)
 		if updated {
 			count++
 		}
@@ -90,12 +90,12 @@ func (h *Handler) doUpdateAddresses() bool {
 	// 	)
 	// }
 
-	h.logger.Infof("Updated %d addresses", count)
+	h.Logger.Infof("Updated %d addresses", count)
 
 	return true
 }
 
-func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.DocumentSnapshot) bool {
+func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.DocumentSnapshot) bool {
 
 	var (
 		address        = doc.Ref.ID
@@ -105,7 +105,7 @@ func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.Docu
 
 	// Fetch the user's collections & NFTs from OpenSea
 	openseaAssets = h.getOpenSeaAssets(address)
-
+	h.Logger.Info("Fetched OpenSea assets", "address", address, "count", len(openseaAssets))
 	// Create a list of wallet collections
 	for _, asset := range openseaAssets {
 		// If we do have a collection for this asset, add to it
@@ -141,7 +141,7 @@ func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.Docu
 	}
 
 	if len(collections) == 0 {
-		h.logger.Info("No collections found for user", address)
+		h.Logger.Info("No collections found for user", address)
 		return false
 	}
 
@@ -155,11 +155,11 @@ func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.Docu
 	})
 
 	if err != nil {
-		h.logger.Error(err)
+		h.Logger.Error(err)
 		return false
 	}
 
-	h.logger.Infow(
+	h.Logger.Infow(
 		"Address updated",
 		"address", address,
 		"updated", wr.UpdateTime,
@@ -173,19 +173,19 @@ func (h *Handler) updateSingleAddressV2(ctx context.Context, doc *firestore.Docu
 	)
 
 	for _, collection := range wallet.Collections {
-		collectionSlugDocs = append(collectionSlugDocs, h.database.Collection("collections").Doc(collection.Slug))
+		collectionSlugDocs = append(collectionSlugDocs, h.Database.Collection("collections").Doc(collection.Slug))
 		slugToOSCollectionMap[collection.Slug] = collection
 	}
 
-	docsnaps, err := h.database.GetAll(h.ctx, collectionSlugDocs)
+	docsnaps, err := h.Database.GetAll(h.Context, collectionSlugDocs)
 	if err != nil {
-		h.logger.Error(err)
+		h.Logger.Error(err)
 		return false
 	}
 
 	for _, docsnap := range docsnaps {
 		if !docsnap.Exists() {
-			database.AddCollectionToDB(h.ctx, &h.os, h.logger, h.database, docsnap.Ref.ID)
+			database.AddCollectionToDB(h.Context, &h.OpenSea, h.Logger, h.Database, docsnap.Ref.ID)
 			time.Sleep(time.Millisecond * 250)
 		}
 	}
