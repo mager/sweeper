@@ -6,13 +6,14 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/mux"
+	"github.com/mager/go-opensea/opensea"
 	bq "github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/config"
 	"github.com/mager/sweeper/database"
 	"github.com/mager/sweeper/etherscan"
 	"github.com/mager/sweeper/handler"
 	"github.com/mager/sweeper/logger"
-	"github.com/mager/sweeper/opensea"
+	os "github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/router"
 	"go.uber.org/fx"
@@ -27,7 +28,7 @@ func main() {
 			database.Options,
 			etherscan.Options,
 			logger.Options,
-			opensea.Options,
+			os.Options,
 			reservoir.Options,
 			router.Options,
 		),
@@ -42,7 +43,7 @@ func Register(
 	database *firestore.Client,
 	etherscan *etherscan.EtherscanClient,
 	logger *zap.SugaredLogger,
-	openSeaClient opensea.OpenSeaClient,
+	openSeaClient *opensea.OpenSeaClient,
 	reservoirClient *reservoir.ReservoirClient,
 	router *mux.Router,
 ) {

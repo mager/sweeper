@@ -41,7 +41,6 @@ func (h *Handler) doUpdateAddress(dryRun bool, address string) bool {
 		u   database.User
 	)
 
-	h.Logger.Info("Updating address", "address", address)
 	docsnap, err := h.Database.Collection("users").Doc(address).Get(h.Context)
 
 	if err != nil {

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/database"
-	"github.com/mager/sweeper/opensea"
 	"google.golang.org/api/iterator"
 )
 
@@ -99,13 +99,13 @@ func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.Docume
 
 	var (
 		address        = doc.Ref.ID
-		openseaAssets  = make([]opensea.OpenSeaAssetV2, 0)
+		openseaAssets  = make([]opensea.Asset, 0)
 		collectionsMap = make(map[string]database.WalletCollection)
 	)
 
 	// Fetch the user's collections & NFTs from OpenSea
 	openseaAssets = h.getOpenSeaAssets(address)
-	h.Logger.Info("Fetched OpenSea assets", "address", address, "count", len(openseaAssets))
+	h.Logger.Infow("Fetched OpenSea assets", "address", address, "count", len(openseaAssets))
 	// Create a list of wallet collections
 	for _, asset := range openseaAssets {
 		// If we do have a collection for this asset, add to it
@@ -185,7 +185,7 @@ func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.Docume
 
 	for _, docsnap := range docsnaps {
 		if !docsnap.Exists() {
-			database.AddCollectionToDB(h.Context, &h.OpenSea, h.Logger, h.Database, docsnap.Ref.ID)
+			database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, docsnap.Ref.ID)
 			time.Sleep(time.Millisecond * 250)
 		}
 	}

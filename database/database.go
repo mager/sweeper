@@ -8,8 +8,8 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/kr/pretty"
+	"github.com/mager/go-opensea/opensea"
 	bq "github.com/mager/sweeper/bigquery"
-	"github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/utils"
 	"go.uber.org/zap"
 )
@@ -116,13 +116,13 @@ func UpdateCollectionStats(
 	if err != nil {
 		logger.Error(err)
 
-		if err.Error() == opensea.OpenSeaNotFoundError {
+		if err.Error() == "collection_not_found" {
 			DeleteCollection(ctx, logger, doc)
 		}
 	}
 
 	var (
-		stats        = collection.Collection.Stats
+		stats        = collection.Stats
 		floor        = stats.FloorPrice
 		sevenDayVol  = stats.SevenDayVolume
 		oneDayVol    = stats.OneDayVolume
@@ -135,7 +135,7 @@ func UpdateCollectionStats(
 		updated      bool
 	)
 
-	if collection.Collection.Slug != "" && floor >= 0.005 {
+	if collection.Slug != "" && floor >= 0.005 {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
 		pretty.Print(collection)
 		// Update collection
@@ -148,7 +148,7 @@ func UpdateCollectionStats(
 			{Path: "num", Value: numOwners},
 			{Path: "sales", Value: utils.RoundFloat(totalSales, 3)},
 			{Path: "supply", Value: utils.RoundFloat(totalSupply, 3)},
-			{Path: "thumb", Value: collection.Collection.ImageURL},
+			{Path: "thumb", Value: collection.ImageURL},
 			// {Path: "traits", Value: collection.Collection.Traits},
 			{Path: "updated", Value: now},
 		})
@@ -192,7 +192,7 @@ func AddCollectionToDB(
 
 	// Get collection from OpenSea
 	collection, err := openSeaClient.GetCollection(slug)
-	stat := collection.Collection.Stats
+	stat := collection.Stats
 	floor = stat.FloorPrice
 
 	if err != nil {
@@ -206,11 +206,11 @@ func AddCollectionToDB(
 		c.OneDayVolume = stat.OneDayVolume
 		c.SevenDayVolume = stat.SevenDayVolume
 		c.ThirtyDayVolume = stat.ThirtyDayVolume
-		c.Thumb = collection.Collection.ImageURL
+		c.Thumb = collection.ImageURL
 		c.TotalSales = stat.TotalSales
 		c.TotalSupply = stat.TotalSupply
 		c.Slug = slug
-		c.Name = collection.Collection.Name
+		c.Name = collection.Name
 		_, err := database.Collection("collections").Doc(slug).Set(ctx, c)
 		if err != nil {
 			logger.Error(err)

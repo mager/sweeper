@@ -124,7 +124,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 
 	if docsnap.Exists() {
 		// Update collection
-		floor, updated = database.UpdateCollectionStats(h.Context, &h.OpenSea, h.BigQuery, h.Logger, docsnap)
+		floor, updated = database.UpdateCollectionStats(h.Context, h.OpenSea, h.BigQuery, h.Logger, docsnap)
 		h.Logger.Infow(
 			"Collection updated",
 			"collection", docsnap.Ref.ID,
@@ -133,7 +133,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 		)
 	} else {
 		// Add collection
-		floor, updated = database.AddCollectionToDB(h.Context, &h.OpenSea, h.Logger, h.Database, req.Slug)
+		floor, updated = database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, req.Slug)
 		h.Logger.Infow(
 			"Collection added",
 			"collection", req.Slug,
@@ -155,7 +155,7 @@ func (h *Handler) updateCollectionsBySlugs(req UpdateCollectionsReq, resp *Updat
 	)
 
 	for _, slug := range slugs {
-		_, updated := database.AddCollectionToDB(h.Context, &h.OpenSea, h.Logger, h.Database, slug)
+		_, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, slug)
 		time.Sleep(time.Millisecond * 250)
 		if updated {
 			updatedCollections++
@@ -215,7 +215,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 				if doc.Data()[c.updateCond.path].(float64) < c.updateCond.value.(float64) {
 					_, updated = database.UpdateCollectionStats(
 						h.Context,
-						&h.OpenSea,
+						h.OpenSea,
 						h.BigQuery,
 						h.Logger,
 						doc,
@@ -227,7 +227,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
 					_, updated = database.UpdateCollectionStats(
 						h.Context,
-						&h.OpenSea,
+						h.OpenSea,
 						h.BigQuery,
 						h.Logger,
 						doc,
@@ -239,7 +239,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		} else {
 			_, updated = database.UpdateCollectionStats(
 				h.Context,
-				&h.OpenSea,
+				h.OpenSea,
 				h.BigQuery,
 				h.Logger,
 				doc,
