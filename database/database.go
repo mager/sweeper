@@ -7,7 +7,6 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
-	"github.com/kr/pretty"
 	"github.com/mager/go-opensea/opensea"
 	bq "github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/utils"
@@ -27,23 +26,19 @@ type Collection struct {
 	NumOwners       int       `firestore:"num" json:"num"`
 	TotalSales      float64   `firestore:"sales" json:"sales"`
 	Updated         time.Time `firestore:"updated" json:"updated"`
+	IndexTokens     bool      `firestore:"indexTokens" json:"indexTokens"`
+	Tokens          Tokens    `firestore:"tokens" json:"tokens"`
 }
 
-// TODO: Delete
-type CollectionV2 struct {
-	Name            string  `firestore:"name" json:"name"`
-	Thumb           string  `firestore:"thumb" json:"thumb"`
-	Floor           float64 `firestore:"floor" json:"floor"`
-	Slug            string  `firestore:"slug" json:"slug"`
-	OneDayVolume    float64 `firestore:"1d" json:"1d"`
-	SevenDayVolume  float64 `firestore:"7d" json:"7d"`
-	ThirtyDayVolume float64 `firestore:"30d" json:"30d"`
-	MarketCap       float64 `firestore:"cap" json:"cap"`
-	TotalSupply     float64 `firestore:"supply" json:"supply"`
-	NumOwners       int     `firestore:"num" json:"num"`
-	TotalSales      float64 `firestore:"sales" json:"sales"`
-	// Traits          []Trait   `firestore:"traits" json:"traits"`
-	Updated time.Time `firestore:"updated" json:"updated"`
+type Tokens struct {
+	LastBlock int64   `firestore:"lastBlock" json:"lastBlock"`
+	LastTrx   string  `firestore:"lastTrx" json:"lastTrx"`
+	Owners    []Token `firestore:"owners" json:"owners"`
+}
+
+type Token struct {
+	ID    string `firestore:"id" json:"id"`
+	Owner string `firestore:"owner" json:"owner"`
 }
 
 type User struct {
@@ -104,9 +99,9 @@ var Options = ProvideDB
 
 func UpdateCollectionStats(
 	ctx context.Context,
+	logger *zap.SugaredLogger,
 	openSeaClient *opensea.OpenSeaClient,
 	bigQueryClient *bigquery.Client,
-	logger *zap.SugaredLogger,
 	doc *firestore.DocumentSnapshot,
 ) (float64, bool) {
 	var docID = doc.Ref.ID
@@ -137,7 +132,7 @@ func UpdateCollectionStats(
 
 	if collection.Slug != "" && floor >= 0.005 {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
-		pretty.Print(collection)
+
 		// Update collection
 		_, err := doc.Ref.Update(ctx, []firestore.Update{
 			{Path: "1d", Value: utils.RoundFloat(oneDayVol, 3)},

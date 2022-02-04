@@ -124,7 +124,13 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 
 	if docsnap.Exists() {
 		// Update collection
-		floor, updated = database.UpdateCollectionStats(h.Context, h.OpenSea, h.BigQuery, h.Logger, docsnap)
+		floor, updated = database.UpdateCollectionStats(
+			h.Context,
+			h.Logger,
+			h.OpenSea,
+			h.BigQuery,
+			docsnap,
+		)
 		h.Logger.Infow(
 			"Collection updated",
 			"collection", docsnap.Ref.ID,
@@ -214,10 +220,10 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 			if c.updateCond.op == "<" {
 				if doc.Data()[c.updateCond.path].(float64) < c.updateCond.value.(float64) {
 					_, updated = database.UpdateCollectionStats(
+						h.Logger,
 						h.Context,
 						h.OpenSea,
 						h.BigQuery,
-						h.Logger,
 						doc,
 					)
 				} else {
@@ -226,10 +232,10 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 			} else if c.updateCond.op == ">" {
 				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
 					_, updated = database.UpdateCollectionStats(
+						h.Logger,
 						h.Context,
 						h.OpenSea,
 						h.BigQuery,
-						h.Logger,
 						doc,
 					)
 				} else {
