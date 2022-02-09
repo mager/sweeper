@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/kr/pretty"
 )
 
 type Contract struct {
@@ -60,8 +59,6 @@ func (h *Handler) updateSingleContract(slug string) bool {
 		h.Logger.Errorf("Error getting latest contract state: %v", err)
 		return false
 	}
-
-	pretty.Print(c)
 
 	// Update contract in Firestore
 	_, err = h.Database.Collection("contracts").Doc(slug).Set(h.Context, c)

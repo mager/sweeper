@@ -95,6 +95,9 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 		return []EtherscanTrx{}, nil
 	}
 
+	// Etherscan's rate limit is 5/sec
+	time.Sleep(250 * time.Millisecond)
+
 	return etherscanResp.Result, nil
 }
 
