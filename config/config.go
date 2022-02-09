@@ -19,6 +19,7 @@ func ProvideConfig() Config {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
 	return cfg
 }
 

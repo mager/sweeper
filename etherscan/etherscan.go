@@ -40,16 +40,19 @@ type EtherscanResp struct {
 }
 
 type EtherscanTrx struct {
-	From      string `json:"from"`
-	To        string `json:"to"`
-	TokenID   string `json:"tokenID"`
-	Timestamp string `json:"timeStamp"`
+	BlockNumber string `json:"blockNumber"`
+	Hash        string `json:"hash"`
+	From        string `json:"from"`
+	To          string `json:"to"`
+	TokenID     string `json:"tokenID"`
+	Timestamp   string `json:"timeStamp"`
 }
 
 func (e *EtherscanClient) GetNFTTransactionsForContract(
 	contract string,
 	page int,
 	offset int,
+	startBlock int64,
 ) ([]EtherscanTrx, error) {
 	u, err := url.Parse("https://api.etherscan.io/api")
 	if err != nil {
@@ -65,6 +68,9 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 	q.Set("sort", "asc")
 	q.Set("page", fmt.Sprintf("%d", page))
 	q.Set("offset", fmt.Sprintf("%d", offset))
+	if startBlock > 0 {
+		q.Set("startblock", fmt.Sprintf("%d", startBlock))
+	}
 	u.RawQuery = q.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -92,6 +98,27 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 
 func (e *EtherscanClient) GetAllNFTTransactionsForContract(
 	contract string,
+	startBlock int64,
 ) ([]EtherscanTrx, error) {
-	return e.GetNFTTransactionsForContract(contract, 0, 1000)
+	var (
+		transactions []EtherscanTrx
+		page         = 0
+		offset       = 1000
+	)
+
+	for {
+		trxs, err := e.GetNFTTransactionsForContract(contract, page, offset, startBlock)
+		if err != nil {
+			return []EtherscanTrx{}, err
+		}
+
+		if len(trxs) == 0 {
+			break
+		}
+
+		transactions = append(transactions, trxs...)
+		page++
+	}
+
+	return transactions, nil
 }

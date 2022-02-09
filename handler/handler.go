@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/mux"
 	"github.com/mager/go-opensea/opensea"
+	"github.com/mager/sweeper/etherscan"
 	"github.com/mager/sweeper/reservoir"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -24,6 +25,7 @@ type Handler struct {
 	Database  *firestore.Client
 	BigQuery  *bigquery.Client
 	Reservoir *reservoir.ReservoirClient
+	Etherscan *etherscan.EtherscanClient
 }
 
 type Condition struct {
@@ -56,6 +58,9 @@ func (h *Handler) registerRoutes() {
 		Methods("POST")
 	h.Router.HandleFunc("/health", h.health).
 		Methods("GET")
+
+	h.Router.HandleFunc("/update/contract/{slug}", h.updateContract).
+		Methods("POST")
 }
 
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {

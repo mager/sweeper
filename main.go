@@ -61,6 +61,7 @@ func Register(
 		Database:  database,
 		BigQuery:  bq,
 		Reservoir: reservoirClient,
+		Etherscan: etherscan,
 	}
 	handler.New(p)
 }

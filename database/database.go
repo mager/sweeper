@@ -26,19 +26,6 @@ type Collection struct {
 	NumOwners       int       `firestore:"num" json:"num"`
 	TotalSales      float64   `firestore:"sales" json:"sales"`
 	Updated         time.Time `firestore:"updated" json:"updated"`
-	IndexTokens     bool      `firestore:"indexTokens" json:"indexTokens"`
-	Tokens          Tokens    `firestore:"tokens" json:"tokens"`
-}
-
-type Tokens struct {
-	LastBlock int64   `firestore:"lastBlock" json:"lastBlock"`
-	LastTrx   string  `firestore:"lastTrx" json:"lastTrx"`
-	Owners    []Token `firestore:"owners" json:"owners"`
-}
-
-type Token struct {
-	ID    string `firestore:"id" json:"id"`
-	Owner string `firestore:"owner" json:"owner"`
 }
 
 type User struct {
