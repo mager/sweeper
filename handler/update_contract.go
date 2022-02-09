@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/kr/pretty"
 )
 
 type Contract struct {
@@ -60,6 +61,8 @@ func (h *Handler) updateSingleContract(slug string) bool {
 		return false
 	}
 
+	pretty.Print(c)
+
 	// Update contract in Firestore
 	_, err = h.Database.Collection("contracts").Doc(slug).Set(h.Context, c)
 	if err != nil {
@@ -71,10 +74,6 @@ func (h *Handler) updateSingleContract(slug string) bool {
 }
 
 func (h *Handler) getLatestContractState(c *Contract) error {
-	if c.LastBlock == 0 {
-		h.Logger.Info("New contract, updating state")
-	}
-
 	var (
 		latestBlock int64
 	)
@@ -86,9 +85,21 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 	}
 
 	var (
-		ownersMap = make(map[int64]string)
-		tokens    = make([]Token, 0)
+		isNew         = c.LastBlock == 0 && len(c.Tokens) == 0
+		updatedOwners = make(map[int64]string)
+		tokens        = make([]Token, 0)
 	)
+
+	if isNew {
+		h.Logger.Info("New contract, updating state")
+	} else {
+		// Set capacity to avoid reallocation
+		updatedOwners = make(map[int64]string, len(c.Tokens))
+		for _, token := range c.Tokens {
+			// Set the current owners owners
+			updatedOwners[token.ID] = token.Owner
+		}
+	}
 
 	// Loop through transactions
 	for _, trx := range trxs {
@@ -98,7 +109,9 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 			h.Logger.Errorf("Error converting tokenID to int: %v", err)
 			return err
 		}
-		ownersMap[tokenID] = trx.To
+
+		// Update the map with the latest owner
+		updatedOwners[tokenID] = trx.To
 
 		// Set latest block
 		var blockInt int64
@@ -112,7 +125,7 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 		}
 	}
 
-	for id, token := range ownersMap {
+	for id, token := range updatedOwners {
 		tokens = append(tokens, Token{
 			ID:    id,
 			Owner: token,

@@ -73,6 +73,8 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 	}
 	u.RawQuery = q.Encode()
 
+	fmt.Println("FIXME: Multiple calls to Etherscan when passing in startBlock")
+	fmt.Println(u.String())
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		log.Fatal(err)
