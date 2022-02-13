@@ -6,21 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/mager/sweeper/database"
 )
-
-type Contract struct {
-	Name      string  `firestore:"name" json:"name"`
-	Address   string  `firestore:"address" json:"address"`
-	NumTokens int     `firestore:"numTokens" json:"numTokens"`
-	LastBlock int64   `firestore:"lastBlock" json:"lastBlock"`
-	Tokens    []Token `firestore:"tokens" json:"tokens"`
-	Updated   int64   `firestore:"updated" json:"updated"`
-}
-
-type Token struct {
-	ID    int64  `firestore:"id" json:"id"`
-	Owner string `firestore:"owner" json:"owner"`
-}
 
 type UpdateContractsResp struct {
 	Success bool `json:"success"`
@@ -47,7 +34,7 @@ func (h *Handler) updateSingleContract(slug string) bool {
 	}
 
 	var (
-		c Contract
+		c database.Contract
 	)
 
 	if err := contract.DataTo(&c); err != nil {
@@ -71,7 +58,7 @@ func (h *Handler) updateSingleContract(slug string) bool {
 	return true
 }
 
-func (h *Handler) getLatestContractState(c *Contract) error {
+func (h *Handler) getLatestContractState(c *database.Contract) error {
 	var (
 		latestBlock int64
 	)
@@ -85,7 +72,7 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 	var (
 		isNew         = c.LastBlock == 0 && len(c.Tokens) == 0
 		updatedOwners = make(map[int64]string)
-		tokens        = make([]Token, 0)
+		tokens        = make([]database.Token, 0)
 	)
 
 	if isNew {
@@ -131,7 +118,7 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 	}
 
 	for id, token := range updatedOwners {
-		tokens = append(tokens, Token{
+		tokens = append(tokens, database.Token{
 			ID:    id,
 			Owner: token,
 		})
@@ -143,7 +130,7 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 	return nil
 }
 
-func sortTokens(tokens []Token) []Token {
+func sortTokens(tokens []database.Token) []database.Token {
 	// Sort tokens
 	for i := 0; i < len(tokens); i++ {
 		for j := i + 1; j < len(tokens); j++ {

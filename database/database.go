@@ -71,6 +71,20 @@ type Wallet struct {
 	Collections []WalletCollection `firestore:"collections" json:"collections"`
 }
 
+type Contract struct {
+	Name      string  `firestore:"name" json:"name"`
+	Address   string  `firestore:"address" json:"address"`
+	NumTokens int     `firestore:"numTokens" json:"numTokens"`
+	LastBlock int64   `firestore:"lastBlock" json:"lastBlock"`
+	Tokens    []Token `firestore:"tokens" json:"tokens"`
+	Updated   int64   `firestore:"updated" json:"updated"`
+}
+
+type Token struct {
+	ID    int64  `firestore:"id" json:"id"`
+	Owner string `firestore:"owner" json:"owner"`
+}
+
 // ProvideDB provides a firestore client
 func ProvideDB() *firestore.Client {
 	projectID := "floor-report-327113"
