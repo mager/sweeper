@@ -14,6 +14,7 @@ type Contract struct {
 	NumTokens int     `firestore:"numTokens" json:"numTokens"`
 	LastBlock int64   `firestore:"lastBlock" json:"lastBlock"`
 	Tokens    []Token `firestore:"tokens" json:"tokens"`
+	Updated   int64   `firestore:"updated" json:"updated"`
 }
 
 type Token struct {
@@ -76,7 +77,7 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 	)
 
 	// Fetch all transactions from Etherscan
-	trxs, err := h.Etherscan.GetAllNFTTransactionsForContract(c.Address, c.LastBlock)
+	trxs, err := h.Etherscan.GetLatestTransactionsForContract(c.Address, c.LastBlock)
 	if err != nil {
 		return err
 	}
@@ -113,12 +114,19 @@ func (h *Handler) getLatestContractState(c *Contract) error {
 		// Set latest block
 		var blockInt int64
 		blockInt, err = strconv.ParseInt(trx.BlockNumber, 10, 64)
+		h.Logger.Infow("Block number", "block", blockInt, "latestBlock", latestBlock)
 		if err != nil {
 			h.Logger.Errorf("Error converting block number to int: %v", err)
 			return err
 		}
 		if latestBlock < blockInt {
 			latestBlock = blockInt
+			updated, err := strconv.ParseInt(trx.Timestamp, 10, 64)
+			if err != nil {
+				h.Logger.Errorf("Error converting timestamp to int: %v", err)
+				return err
+			}
+			c.Updated = updated
 		}
 	}
 

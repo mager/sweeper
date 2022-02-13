@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/mager/sweeper/config"
@@ -50,7 +51,6 @@ type EtherscanTrx struct {
 
 func (e *EtherscanClient) GetNFTTransactionsForContract(
 	contract string,
-	page int,
 	offset int,
 	startBlock int64,
 ) ([]EtherscanTrx, error) {
@@ -66,15 +66,14 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 	q.Set("module", "account")
 	q.Set("action", "tokennfttx")
 	q.Set("sort", "asc")
-	q.Set("page", fmt.Sprintf("%d", page))
 	q.Set("offset", fmt.Sprintf("%d", offset))
+	q.Set("endblock", "999999999")
 	if startBlock > 0 {
 		q.Set("startblock", fmt.Sprintf("%d", startBlock))
 	}
 	u.RawQuery = q.Encode()
 
-	fmt.Println("FIXME: Multiple calls to Etherscan when passing in startBlock")
-	fmt.Println(u.String())
+	e.logger.Infow("Etherscan API call", "url", u.String())
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -101,28 +100,38 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 	return etherscanResp.Result, nil
 }
 
-func (e *EtherscanClient) GetAllNFTTransactionsForContract(
+func (e *EtherscanClient) GetLatestTransactionsForContract(
 	contract string,
 	startBlock int64,
 ) ([]EtherscanTrx, error) {
 	var (
 		transactions []EtherscanTrx
-		page         = 0
-		offset       = 1000
+		offset       = 0
+		latestBlock  = startBlock
 	)
 
 	for {
-		trxs, err := e.GetNFTTransactionsForContract(contract, page, offset, startBlock)
+		trxs, err := e.GetNFTTransactionsForContract(contract, offset, latestBlock)
 		if err != nil {
 			return []EtherscanTrx{}, err
 		}
 
-		if len(trxs) == 0 {
+		if len(trxs) == 0 || len(trxs) == 1 {
+			e.logger.Infow("Breaking out", "len", len(trxs))
 			break
 		}
 
 		transactions = append(transactions, trxs...)
-		page++
+
+		// Get blockNumber from last trx
+		lastTrx := trxs[len(trxs)-1]
+		i, err := strconv.ParseInt(lastTrx.BlockNumber, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+			return []EtherscanTrx{}, nil
+		}
+		latestBlock = i
+		e.logger.Infof("Latest block: %d", latestBlock)
 	}
 
 	return transactions, nil
