@@ -104,7 +104,7 @@ func UpdateCollectionStats(
 	openSeaClient *opensea.OpenSeaClient,
 	bigQueryClient *bigquery.Client,
 	doc *firestore.DocumentSnapshot,
-) (float64, bool) {
+) (Collection, bool) {
 	var docID = doc.Ref.ID
 
 	// Fetch collection from OpenSea
@@ -168,7 +168,7 @@ func UpdateCollectionStats(
 
 	time.Sleep(time.Millisecond * 500)
 
-	return floor, updated
+	return docToCollection(doc), updated
 }
 
 func AddCollectionToDB(
@@ -232,4 +232,10 @@ func DeleteCollection(
 		return
 	}
 	logger.Infow("Deleted collection", "collection", collection)
+}
+
+func docToCollection(doc *firestore.DocumentSnapshot) Collection {
+	var c Collection
+	doc.DataTo(&c)
+	return c
 }

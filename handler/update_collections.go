@@ -70,8 +70,8 @@ type UpdateCollectionsReq struct {
 }
 
 type UpdateCollectionsResp struct {
-	Success bool    `json:"success"`
-	Floor   float64 `json:"floor"`
+	Success    bool                `json:"success"`
+	Collection database.Collection `json:"collection"`
 }
 
 func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +97,7 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
 			return
 		}
-		resp.Floor, resp.Success = h.updateSingleCollection(req, &resp)
+		resp.Collection, resp.Success = h.updateSingleCollection(req, &resp)
 	} else {
 		resp.Success = h.updateCollectionsByType(req.CollectionType)
 	}
@@ -106,11 +106,12 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 }
 
 // updateSingleCollection updates a single collection
-func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) (float64, bool) {
+func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) (database.Collection, bool) {
 	var (
-		err     error
-		floor   float64
-		updated bool
+		err        error
+		floor      float64
+		collection database.Collection
+		updated    bool
 	)
 
 	docsnap, err := h.Database.Collection("collections").Doc(req.Slug).Get(h.Context)
@@ -120,12 +121,12 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 			"Error fetching collection from Firestore",
 			"err", err,
 		)
-		return floor, updated
+		return collection, updated
 	}
 
 	if docsnap.Exists() {
 		// Update collection
-		floor, updated = database.UpdateCollectionStats(
+		collection, updated = database.UpdateCollectionStats(
 			h.Context,
 			h.Logger,
 			h.OpenSea,
@@ -149,7 +150,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 		)
 	}
 
-	return floor, updated
+	return collection, updated
 }
 
 // updateCollectionsBySlugs updates a single collection
