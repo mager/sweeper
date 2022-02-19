@@ -126,7 +126,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 
 	if docsnap.Exists() {
 		// Update collection
-		collection, updated = database.UpdateCollectionStats(
+		updated = database.UpdateCollectionStats(
 			h.Context,
 			h.Logger,
 			h.OpenSea,
@@ -148,6 +148,11 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 			"floor", floor,
 			"updated", updated,
 		)
+	}
+
+	if updated {
+		// Fetch collection
+		collection = database.GetCollection(h.Context, h.Logger, h.Database, req.Slug)
 	}
 
 	return collection, updated
@@ -187,8 +192,6 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		return false
 	}
 
-	h.Logger.Info(c.log)
-
 	var (
 		collections = h.Database.Collection("collections")
 		count       = 0
@@ -219,7 +222,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		if c.updateCond.path != "" {
 			if c.updateCond.op == "<" {
 				if doc.Data()[c.updateCond.path].(float64) < c.updateCond.value.(float64) {
-					_, updated = database.UpdateCollectionStats(
+					updated = database.UpdateCollectionStats(
 						h.Context,
 						h.Logger,
 						h.OpenSea,
@@ -231,7 +234,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 				}
 			} else if c.updateCond.op == ">" {
 				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
-					_, updated = database.UpdateCollectionStats(
+					updated = database.UpdateCollectionStats(
 						h.Context,
 						h.Logger,
 						h.OpenSea,
@@ -243,7 +246,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 				}
 			}
 		} else {
-			_, updated = database.UpdateCollectionStats(
+			updated = database.UpdateCollectionStats(
 				h.Context,
 				h.Logger,
 				h.OpenSea,

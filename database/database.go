@@ -104,8 +104,8 @@ func UpdateCollectionStats(
 	openSeaClient *opensea.OpenSeaClient,
 	bigQueryClient *bigquery.Client,
 	doc *firestore.DocumentSnapshot,
-) (Collection, bool) {
-	var docID = doc.Ref.ID
+) bool {
+	docID := doc.Ref.ID
 
 	// Fetch collection from OpenSea
 	collection, err := openSeaClient.GetCollection(docID)
@@ -168,7 +168,7 @@ func UpdateCollectionStats(
 
 	time.Sleep(time.Millisecond * 500)
 
-	return docToCollection(doc), updated
+	return updated
 }
 
 func AddCollectionToDB(
@@ -179,12 +179,10 @@ func AddCollectionToDB(
 	slug string,
 ) (float64, bool) {
 	// Add collection to db
-	var (
-		c = Collection{
-			Updated: time.Now(),
-		}
-		floor float64
-	)
+	c := Collection{
+		Updated: time.Now(),
+	}
+	floor := 0.0
 
 	// Get collection from OpenSea
 	collection, err := openSeaClient.GetCollection(slug)
@@ -234,8 +232,25 @@ func DeleteCollection(
 	logger.Infow("Deleted collection", "collection", collection)
 }
 
-func docToCollection(doc *firestore.DocumentSnapshot) Collection {
+func GetCollection(ctx context.Context, logger *zap.SugaredLogger, database *firestore.Client, slug string) Collection {
 	var c Collection
-	doc.DataTo(&c)
+	docsnap, err := database.Collection("collections").Doc(slug).Get(ctx)
+	if err != nil {
+		logger.Errorw(
+			"Error fetching collection from Firestore",
+			"err", err,
+		)
+		return c
+	}
+
+	err = docsnap.DataTo(&c)
+	if err != nil {
+		logger.Errorw(
+			"Error casting collection from Firestore",
+			"err", err,
+		)
+		return c
+	}
+
 	return c
 }
