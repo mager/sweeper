@@ -70,7 +70,8 @@ type UpdateCollectionsReq struct {
 }
 
 type UpdateCollectionsResp struct {
-	Success bool `json:"success"`
+	Success bool    `json:"success"`
+	Floor   float64 `json:"floor"`
 }
 
 func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +97,7 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
 			return
 		}
-		resp.Success = h.updateSingleCollection(req, &resp)
+		resp.Floor, resp.Success = h.updateSingleCollection(req, &resp)
 	} else {
 		resp.Success = h.updateCollectionsByType(req.CollectionType)
 	}
@@ -105,7 +106,7 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 }
 
 // updateSingleCollection updates a single collection
-func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) bool {
+func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) (float64, bool) {
 	var (
 		err     error
 		floor   float64
@@ -119,7 +120,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 			"Error fetching collection from Firestore",
 			"err", err,
 		)
-		return updated
+		return floor, updated
 	}
 
 	if docsnap.Exists() {
@@ -148,9 +149,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 		)
 	}
 
-	updated = true
-
-	return updated
+	return floor, updated
 }
 
 // updateCollectionsBySlugs updates a single collection
