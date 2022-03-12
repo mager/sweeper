@@ -61,6 +61,9 @@ func (h *Handler) registerRoutes() {
 
 	h.Router.HandleFunc("/update/contract/{slug}", h.updateContract).
 		Methods("POST")
+
+	h.Router.HandleFunc("/rename/users", h.renameUsers).
+		Methods("POST")
 }
 
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
