@@ -13,6 +13,12 @@ type UpdateContractsResp struct {
 	Success bool `json:"success"`
 }
 
+type Token struct {
+	ID       int64
+	Owner    string
+	LastSale int64
+}
+
 func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request) {
 	var (
 		resp = UpdateContractsResp{}
@@ -71,7 +77,7 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 
 	var (
 		isNew         = c.LastBlock == 0 && len(c.Tokens) == 0
-		updatedOwners = make(map[int64]string)
+		updatedOwners = make(map[int64]Token)
 		tokens        = make([]database.Token, 0)
 	)
 
@@ -79,10 +85,14 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 		h.Logger.Info("New contract, updating state")
 	} else {
 		// Set capacity to avoid reallocation
-		updatedOwners = make(map[int64]string, len(c.Tokens))
+		updatedOwners = make(map[int64]Token, len(c.Tokens))
 		for _, token := range c.Tokens {
 			// Set the current owners owners
-			updatedOwners[token.ID] = token.Owner
+			updatedOwners[token.ID] = Token{
+				ID:       token.ID,
+				Owner:    token.Owner,
+				LastSale: token.LastSale,
+			}
 		}
 	}
 
@@ -95,8 +105,19 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 			return err
 		}
 
+		// Convert timestamp to int
+		timestamp, err := strconv.ParseInt(trx.Timestamp, 10, 64)
+		if err != nil {
+			h.Logger.Errorf("Error converting timestamp to int: %v", err)
+			return err
+		}
+
 		// Update the map with the latest owner
-		updatedOwners[tokenID] = trx.To
+		updatedOwners[tokenID] = Token{
+			ID:       tokenID,
+			Owner:    trx.To,
+			LastSale: int64(timestamp),
+		}
 
 		// Set latest block
 		var blockInt int64
@@ -117,10 +138,11 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 		}
 	}
 
-	for id, token := range updatedOwners {
+	for _, token := range updatedOwners {
 		tokens = append(tokens, database.Token{
-			ID:    id,
-			Owner: token,
+			ID:       token.ID,
+			Owner:    token.Owner,
+			LastSale: token.LastSale,
 		})
 	}
 
