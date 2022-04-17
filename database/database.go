@@ -86,6 +86,10 @@ type Token struct {
 	LastSale int64  `firestore:"lastSale" json:"lastSale"`
 }
 
+type Alias struct {
+	Slug string `firestore:"slug" json:"slug"`
+}
+
 // ProvideDB provides a firestore client
 func ProvideDB() *firestore.Client {
 	projectID := "floor-report-327113"
