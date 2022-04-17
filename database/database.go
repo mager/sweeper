@@ -81,8 +81,9 @@ type Contract struct {
 }
 
 type Token struct {
-	ID    int64  `firestore:"id" json:"id"`
-	Owner string `firestore:"owner" json:"owner"`
+	ID       int64  `firestore:"id" json:"id"`
+	Owner    string `firestore:"owner" json:"owner"`
+	LastSale int64  `firestore:"lastSale" json:"lastSale"`
 }
 
 // ProvideDB provides a firestore client

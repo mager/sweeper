@@ -28,7 +28,7 @@ func ProvideEtherscan(cfg config.Config, logger *zap.SugaredLogger) *EtherscanCl
 		Client: client,
 		apiKey: cfg.EtherscanAPIKey,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 		logger: logger,
 	}
@@ -67,7 +67,9 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 	q.Set("action", "tokennfttx")
 	q.Set("sort", "asc")
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	q.Set("endblock", "999999999")
+	// Set endblock to 100 blocks after startBlock
+	// q.Set("endblock", fmt.Sprintf("%d", startBlock+10000))
+	// q.Set("endblock", "999999999")
 	if startBlock > 0 {
 		q.Set("startblock", fmt.Sprintf("%d", startBlock))
 	}
