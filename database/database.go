@@ -211,7 +211,6 @@ func AddCollectionToDB(
 			logger.Error(err)
 			return floor, false
 		}
-		logger.Infow("Added collection to db", "collection", slug)
 	}
 
 	return floor, true
