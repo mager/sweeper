@@ -112,16 +112,23 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 		floor      float64
 		collection database.Collection
 		updated    bool
+		slug       = req.Slug
 	)
 
-	docsnap, err := h.Database.Collection("collections").Doc(req.Slug).Get(h.Context)
+	docsnap, err := h.Database.Collection("collections").Doc(slug).Get(h.Context)
 
 	if err != nil {
 		h.Logger.Errorw(
 			"Error fetching collection from Firestore",
 			"err", err,
 		)
-		return collection, updated
+		floor, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, slug)
+		h.Logger.Infow(
+			"Collection added",
+			"collection", slug,
+			"floor", floor,
+			"updated", updated,
+		)
 	}
 
 	if docsnap.Exists() {
@@ -136,15 +143,6 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 		h.Logger.Infow(
 			"Collection updated",
 			"collection", docsnap.Ref.ID,
-			"floor", floor,
-			"updated", updated,
-		)
-	} else {
-		// Add collection
-		floor, updated = database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, req.Slug)
-		h.Logger.Infow(
-			"Collection added",
-			"collection", req.Slug,
 			"floor", floor,
 			"updated", updated,
 		)
