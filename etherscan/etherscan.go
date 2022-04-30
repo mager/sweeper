@@ -51,7 +51,6 @@ type EtherscanTrx struct {
 
 func (e *EtherscanClient) GetNFTTransactionsForContract(
 	contract string,
-	offset int,
 	startBlock int64,
 ) ([]EtherscanTrx, error) {
 	u, err := url.Parse("https://api.etherscan.io/api")
@@ -66,16 +65,10 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 	q.Set("module", "account")
 	q.Set("action", "tokennfttx")
 	q.Set("sort", "asc")
-	q.Set("offset", fmt.Sprintf("%d", offset))
-	// Set endblock to 100 blocks after startBlock
-	// q.Set("endblock", fmt.Sprintf("%d", startBlock+10000))
-	// q.Set("endblock", "999999999")
-	if startBlock > 0 {
-		q.Set("startblock", fmt.Sprintf("%d", startBlock))
-	}
+	q.Set("startblock", fmt.Sprintf("%d", startBlock))
 	u.RawQuery = q.Encode()
 
-	e.logger.Infow("Etherscan API call", "url", u.String())
+	e.logger.Infow("Etherscan API call", "url", u.String(), "startBlock", startBlock)
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -96,8 +89,8 @@ func (e *EtherscanClient) GetNFTTransactionsForContract(
 		return []EtherscanTrx{}, nil
 	}
 
-	// Etherscan's rate limit is 5/sec
-	time.Sleep(250 * time.Millisecond)
+	// Etherscan's rate limit is 2/sec
+	time.Sleep(500 * time.Millisecond)
 
 	return etherscanResp.Result, nil
 }
@@ -108,17 +101,16 @@ func (e *EtherscanClient) GetLatestTransactionsForContract(
 ) ([]EtherscanTrx, error) {
 	var (
 		transactions []EtherscanTrx
-		offset       = 0
-		latestBlock  = startBlock
+		lastTrxBlock = startBlock
 	)
 
 	for {
-		trxs, err := e.GetNFTTransactionsForContract(contract, offset, latestBlock)
+		trxs, err := e.GetNFTTransactionsForContract(contract, lastTrxBlock)
 		if err != nil {
 			return []EtherscanTrx{}, err
 		}
 
-		if len(trxs) == 0 || len(trxs) == 1 {
+		if len(trxs) < 10000 {
 			e.logger.Infow("Breaking out", "len", len(trxs))
 			break
 		}
@@ -132,8 +124,8 @@ func (e *EtherscanClient) GetLatestTransactionsForContract(
 			log.Fatal(err)
 			return []EtherscanTrx{}, nil
 		}
-		latestBlock = i
-		e.logger.Infof("Latest block: %d", latestBlock)
+		lastTrxBlock = i
+		e.logger.Infof("Latest block: %d", lastTrxBlock, "len", len(transactions))
 	}
 
 	return transactions, nil

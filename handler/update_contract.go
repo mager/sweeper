@@ -66,7 +66,7 @@ func (h *Handler) updateSingleContract(slug string) bool {
 
 func (h *Handler) getLatestContractState(c *database.Contract) error {
 	var (
-		latestBlock int64
+		latestBlock = c.LastBlock
 	)
 
 	// Fetch all transactions from Etherscan
@@ -118,11 +118,12 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 			Owner:    trx.To,
 			LastSale: int64(timestamp),
 		}
+		h.Logger.Infow("Updated owner", "tokenID", tokenID, "owner", trx.To)
 
 		// Set latest block
 		var blockInt int64
 		blockInt, err = strconv.ParseInt(trx.BlockNumber, 10, 64)
-		h.Logger.Infow("Block number", "block", blockInt, "latestBlock", latestBlock)
+		h.Logger.Infow("Setting latest block number", "block", blockInt, "latestBlock", latestBlock)
 		if err != nil {
 			h.Logger.Errorf("Error converting block number to int: %v", err)
 			return err
