@@ -45,8 +45,9 @@ type User struct {
 	OpenSea string `firestore:"openSea" json:"openSea"`
 
 	// Settings
-	IsWhale     bool `firestore:"isWhale" json:"isWhale"`
-	ShouldIndex bool `firestore:"shouldIndex" json:"shouldIndex"`
+	IsWhale     bool   `firestore:"isWhale" json:"isWhale"`
+	ShouldIndex bool   `firestore:"shouldIndex" json:"shouldIndex"`
+	DiscordID   string `firestore:"discordID" json:"discordID"`
 }
 
 type WalletCollection struct {
@@ -81,9 +82,10 @@ type Contract struct {
 }
 
 type Token struct {
-	ID       int64  `firestore:"id" json:"id"`
-	Owner    string `firestore:"owner" json:"owner"`
-	LastSale int64  `firestore:"lastSale" json:"lastSale"`
+	ID        int64  `firestore:"id" json:"id"`
+	Owner     string `firestore:"owner" json:"owner"`
+	LastSale  int64  `firestore:"lastSale" json:"lastSale"`
+	DiscordID int64  `firestore:"discordId" json:"discordId"`
 }
 
 type Alias struct {

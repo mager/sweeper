@@ -14,9 +14,10 @@ type UpdateContractsResp struct {
 }
 
 type Token struct {
-	ID       int64
-	Owner    string
-	LastSale int64
+	ID        int64
+	Owner     string
+	LastSale  int64
+	DiscordID int64
 }
 
 func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request) {
@@ -89,9 +90,10 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 		for _, token := range c.Tokens {
 			// Set the current owners owners
 			updatedOwners[token.ID] = Token{
-				ID:       token.ID,
-				Owner:    token.Owner,
-				LastSale: token.LastSale,
+				ID:        token.ID,
+				Owner:     token.Owner,
+				LastSale:  token.LastSale,
+				DiscordID: token.DiscordID,
 			}
 		}
 	}
@@ -141,9 +143,10 @@ func (h *Handler) getLatestContractState(c *database.Contract) error {
 
 	for _, token := range updatedOwners {
 		tokens = append(tokens, database.Token{
-			ID:       token.ID,
-			Owner:    token.Owner,
-			LastSale: token.LastSale,
+			ID:        token.ID,
+			Owner:     token.Owner,
+			LastSale:  token.LastSale,
+			DiscordID: token.DiscordID,
 		})
 	}
 
