@@ -30,6 +30,7 @@ type Collection struct {
 
 type User struct {
 	Name    string `firestore:"name" json:"name"`
+	Bio     string `firestore:"bio" json:"bio"`
 	Photo   bool   `firestore:"photo" json:"photo"`
 	ENSName string `firestore:"ensName" json:"ensName"`
 
