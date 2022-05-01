@@ -41,14 +41,13 @@ type User struct {
 	Collections []string `firestore:"collections" json:"collections"`
 
 	// Socials
-	Slug    string `firestore:"slug" json:"slug"`
-	Twitter string `firestore:"twitter" json:"twitter"`
-	OpenSea string `firestore:"openSea" json:"openSea"`
+	Slug      string `firestore:"slug" json:"slug"`
+	Twitter   string `firestore:"twitter" json:"twitter"`
+	DiscordID string `firestore:"discordID" json:"discordID"`
 
 	// Settings
-	IsWhale     bool   `firestore:"isWhale" json:"isWhale"`
-	ShouldIndex bool   `firestore:"shouldIndex" json:"shouldIndex"`
-	DiscordID   string `firestore:"discordID" json:"discordID"`
+	IsWhale     bool `firestore:"isWhale" json:"isWhale"`
+	ShouldIndex bool `firestore:"shouldIndex" json:"shouldIndex"`
 }
 
 type WalletCollection struct {
