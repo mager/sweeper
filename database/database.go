@@ -70,6 +70,7 @@ type Trait struct {
 
 type Wallet struct {
 	Collections []WalletCollection `firestore:"collections" json:"collections"`
+	UpdatedAt   time.Time          `firestore:"updatedAt" json:"updatedAt"`
 }
 
 type Contract struct {

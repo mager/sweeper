@@ -96,7 +96,6 @@ func (h *Handler) doUpdateAddresses() bool {
 }
 
 func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.DocumentSnapshot) bool {
-
 	var (
 		address        = doc.Ref.ID
 		openseaAssets  = make([]opensea.Asset, 0)
@@ -147,6 +146,7 @@ func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.Docume
 
 	wallet := database.Wallet{
 		Collections: collections,
+		UpdatedAt:   time.Now(),
 	}
 
 	// Update collections
