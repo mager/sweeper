@@ -13,6 +13,12 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	collectionDenylist = []string{
+		"down2earth-0day",
+	}
+)
+
 type Collection struct {
 	Name            string    `firestore:"name" json:"name"`
 	Thumb           string    `firestore:"thumb" json:"thumb"`
@@ -186,6 +192,11 @@ func AddCollectionToDB(
 	database *firestore.Client,
 	slug string,
 ) (float64, bool) {
+	// If slug is in collectionDenylist, return
+	if utils.Contains(collectionDenylist, slug) {
+		logger.Infow("Collection is in denylist", "collection", slug)
+		return 0, false
+	}
 	// Add collection to db
 	c := Collection{
 		Updated: time.Now(),
