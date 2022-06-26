@@ -25,7 +25,7 @@ type BQCollectionsUpdateRecord struct {
 
 // ProvideBQ provides a bigquery client
 func ProvideBQ() *bigquery.Client {
-	projectID := "floor-report-327113"
+	projectID := "floorreport"
 
 	client, err := bigquery.NewClient(context.TODO(), projectID)
 	if err != nil {
@@ -72,7 +72,7 @@ func RecordCollectionsUpdateInBigQuery(
 ) {
 	var (
 		ctx     = context.Background()
-		dataset = bq.DatasetInProject("floor-report-327113", "collections")
+		dataset = bq.DatasetInProject("floorreport", "collections")
 		table   = dataset.Table("update")
 		u       = table.Inserter()
 

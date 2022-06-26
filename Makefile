@@ -6,11 +6,11 @@ test:
 	go test ./...
 
 build:
-	gcloud builds submit --tag gcr.io/floor-report-327113/sweeper
+	gcloud builds submit --tag gcr.io/floorreport/sweeper
 
 deploy:
 	gcloud run deploy sweeper \
-		--image gcr.io/floor-report-327113/sweeper \
+		--image gcr.io/floorreport/sweeper \
 		--platform managed
 
 ship:
