@@ -58,6 +58,8 @@ func (h *Handler) registerRoutes() {
 		Methods("POST")
 	h.Router.HandleFunc("/update/stats", h.updateStats).
 		Methods("POST")
+	h.Router.HandleFunc("/update/random_nft", h.updateRandomNFT).
+		Methods("POST")
 	h.Router.HandleFunc("/health", h.health).
 		Methods("GET")
 

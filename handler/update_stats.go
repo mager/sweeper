@@ -11,6 +11,12 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+type Stats struct {
+	TotalCollections int       `json:"totalCollections"`
+	TotalUsers       int       `json:"totalUsers"`
+	Updated          time.Time `json:"updated"`
+}
+
 type UpdateStatsReq struct {
 	Success bool `json:"success"`
 }

@@ -201,7 +201,6 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 	var (
 		collections = h.Database.Collection("collections")
 		count       = 0
-		slugs       = make([]string, 0)
 		iter        *firestore.DocumentIterator
 	)
 
@@ -267,7 +266,6 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 
 		if updated {
 			count++
-			slugs = append(slugs, doc.Ref.ID)
 		}
 	}
 
