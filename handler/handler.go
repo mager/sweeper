@@ -56,6 +56,8 @@ func (h *Handler) registerRoutes() {
 		Methods("POST")
 	h.Router.HandleFunc("/update/user", h.updateUser).
 		Methods("POST")
+	h.Router.HandleFunc("/update/stats", h.updateStats).
+		Methods("POST")
 	h.Router.HandleFunc("/health", h.health).
 		Methods("GET")
 
