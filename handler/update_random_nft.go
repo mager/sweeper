@@ -66,11 +66,12 @@ func (h *Handler) doUpdateRandomNFT() bool {
 
 	// Update NFT
 	h.Database.Collection("features").Doc("nftoftheday").Set(h.Context, map[string]interface{}{
-		"collection": collection.Name,
-		"imageUrl":   nft.ImageURL,
-		"name":       nft.Name,
-		"owner":      getOwner(u, userData),
-		"updated":    time.Now(),
+		"collectionName": collection.Name,
+		"collectionSlug": collection.Slug,
+		"imageUrl":       nft.ImageURL,
+		"name":           nft.Name,
+		"owner":          getOwner(u, userData),
+		"updated":        time.Now(),
 	}, firestore.MergeAll)
 
 	return true
