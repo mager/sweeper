@@ -14,51 +14,11 @@ import (
 type CollectionType string
 
 var (
-	CollectionTypeNew       CollectionType = "new"
 	CollectionTypeAll       CollectionType = "all"
-	CollectionTypeTierA     CollectionType = "a"
-	CollectionTypeTierB     CollectionType = "b"
 	UpdateCollectionsConfig                = map[CollectionType]Config{
 		CollectionTypeAll: {
 			desc: "All collections",
 			log:  "Updating all collections",
-		},
-		CollectionTypeNew: {
-			desc: "Collections added in the last 4 hours",
-			log:  "Updating new collections",
-			queryCond: Condition{
-				path:  "floor",
-				op:    "==",
-				value: -1,
-			},
-		},
-		CollectionTypeTierA: {
-			desc: "7 day volume is over 0.5 ETH",
-			log:  "Updating Tier A collections (7 day volume is over 0.5 ETH)",
-			queryCond: Condition{
-				path:  "updated",
-				op:    "<",
-				value: time.Now().Add(-4 * time.Hour),
-			},
-			updateCond: Condition{
-				path:  "7d",
-				op:    ">",
-				value: 0.5,
-			},
-		},
-		CollectionTypeTierB: {
-			desc: "7 day volume is under 0.6 ETH",
-			log:  "Updating Tier B collections (7 day volume is under 0.6 ETH)",
-			queryCond: Condition{
-				path:  "updated",
-				op:    "<",
-				value: time.Now().Add(-3 * 24 * time.Hour),
-			},
-			updateCond: Condition{
-				path:  "7d",
-				op:    "<",
-				value: 0.6,
-			},
 		},
 	}
 )
@@ -207,6 +167,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 	if c.queryCond.path != "" {
 		iter = collections.Where(c.queryCond.path, c.queryCond.op, c.queryCond.value).Documents(h.Context)
 	} else {
+		h.Logger.Info("Updating all collections")
 		iter = collections.Documents(h.Context)
 	}
 
@@ -224,41 +185,13 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 
 		// Update the floor price
 		var updated bool
-		if c.updateCond.path != "" {
-			if c.updateCond.op == "<" {
-				if doc.Data()[c.updateCond.path].(float64) < c.updateCond.value.(float64) {
-					updated = database.UpdateCollectionStats(
-						h.Context,
-						h.Logger,
-						h.OpenSea,
-						h.BigQuery,
-						doc,
-					)
-				} else {
-					h.logNoUpdate(doc, c)
-				}
-			} else if c.updateCond.op == ">" {
-				if doc.Data()[c.updateCond.path].(float64) > c.updateCond.value.(float64) {
-					updated = database.UpdateCollectionStats(
-						h.Context,
-						h.Logger,
-						h.OpenSea,
-						h.BigQuery,
-						doc,
-					)
-				} else {
-					h.logNoUpdate(doc, c)
-				}
-			}
-		} else {
-			updated = database.UpdateCollectionStats(
-				h.Context,
-				h.Logger,
-				h.OpenSea,
-				h.BigQuery,
-				doc,
-			)
-		}
+		updated = database.UpdateCollectionStats(
+			h.Context,
+			h.Logger,
+			h.OpenSea,
+			h.BigQuery,
+			doc,
+		)
 
 		// Sleep because OpenSea throttles requests
 		// Rate limit is 4 requests per second

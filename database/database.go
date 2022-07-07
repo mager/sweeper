@@ -8,7 +8,6 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/mager/go-opensea/opensea"
-	bq "github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/utils"
 	"go.uber.org/zap"
 )
@@ -166,14 +165,14 @@ func UpdateCollectionStats(
 			logger.Error(err)
 		}
 
-		bq.RecordCollectionsUpdateInBigQuery(
-			bigQueryClient,
-			logger,
-			docID,
-			floor,
-			sevenDayVol,
-			now,
-		)
+		// bq.RecordCollectionsUpdateInBigQuery(
+		// 	bigQueryClient,
+		// 	logger,
+		// 	docID,
+		// 	floor,
+		// 	sevenDayVol,
+		// 	now,
+		// )
 
 		updated = true
 	} else {
