@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/etherscan"
+	"github.com/mager/sweeper/nftstats"
 	"github.com/mager/sweeper/reservoir"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -18,14 +19,15 @@ import (
 type Handler struct {
 	fx.In
 
-	Context   context.Context
-	Router    *mux.Router
-	Logger    *zap.SugaredLogger
-	OpenSea   *opensea.OpenSeaClient
-	Database  *firestore.Client
 	BigQuery  *bigquery.Client
-	Reservoir *reservoir.ReservoirClient
+	Context   context.Context
+	Database  *firestore.Client
 	Etherscan *etherscan.EtherscanClient
+	Logger    *zap.SugaredLogger
+	NFTStats  *nftstats.NFTStatsClient
+	OpenSea   *opensea.OpenSeaClient
+	Reservoir *reservoir.ReservoirClient
+	Router    *mux.Router
 }
 
 type Condition struct {
