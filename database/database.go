@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/mager/go-opensea/opensea"
+	"github.com/mager/sweeper/nftstats"
 	"github.com/mager/sweeper/utils"
 	"go.uber.org/zap"
 )
@@ -31,6 +32,8 @@ type Collection struct {
 	NumOwners       int       `firestore:"num" json:"num"`
 	TotalSales      float64   `firestore:"sales" json:"sales"`
 	Updated         time.Time `firestore:"updated" json:"updated"`
+
+	TopNFTs []TopNFT `firestore:"topNFTs" json:"topNFTs"`
 }
 
 type User struct {
@@ -51,7 +54,7 @@ type User struct {
 	DiscordID string `firestore:"discordID" json:"discordID"`
 
 	// Settings
-	IsWhale     bool `firestore:"isWhale" json:"isWhale"`
+	IsFren      bool `firestore:"isFren" json:"isFren"`
 	ShouldIndex bool `firestore:"shouldIndex" json:"shouldIndex"`
 }
 
@@ -98,6 +101,13 @@ type Alias struct {
 	Slug string `firestore:"slug" json:"slug"`
 }
 
+type TopNFT struct {
+	Collection string `firestore:"collection" json:"collection"`
+	Name       string `firestore:"name" json:"name"`
+	OSLink     string `firestore:"osLink" json:"osLink"`
+	Image      string `firestore:"image" json:"image"`
+}
+
 // ProvideDB provides a firestore client
 func ProvideDB() *firestore.Client {
 	projectID := "floorreport"
@@ -116,6 +126,7 @@ func UpdateCollectionStats(
 	logger *zap.SugaredLogger,
 	openSeaClient *opensea.OpenSeaClient,
 	bigQueryClient *bigquery.Client,
+	nftstatsClient *nftstats.NFTStatsClient,
 	doc *firestore.DocumentSnapshot,
 ) bool {
 	docID := doc.Ref.ID
@@ -128,6 +139,12 @@ func UpdateCollectionStats(
 		if err.Error() == "collection_not_found" {
 			DeleteCollection(ctx, logger, doc)
 		}
+	}
+
+	// Fetch collection from NFT Stats
+	topNFTs, err := nftstatsClient.GetTopNFTs(docID)
+	if err != nil {
+		logger.Error(err)
 	}
 
 	var (
@@ -144,7 +161,7 @@ func UpdateCollectionStats(
 		updated      bool
 	)
 
-	if collection.Slug != "" && floor >= 0.005 {
+	if collection.Slug != "" && floor >= 0.001 {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
 
 		// Update collection
@@ -160,6 +177,8 @@ func UpdateCollectionStats(
 			{Path: "thumb", Value: collection.ImageURL},
 			// {Path: "traits", Value: collection.Collection.Traits},
 			{Path: "updated", Value: now},
+
+			{Path: "topNfts", Value: topNFTs},
 		})
 		if err != nil {
 			logger.Error(err)
@@ -270,4 +289,26 @@ func GetCollection(ctx context.Context, logger *zap.SugaredLogger, database *fir
 	}
 
 	return c
+}
+
+func GetTopNFTs(ctx context.Context, logger *zap.SugaredLogger, nftstatsClient *nftstats.NFTStatsClient, slug string) []TopNFT {
+	// Call NFT Stats API
+	nfts, err := nftstatsClient.GetTopNFTs(slug)
+	if err != nil {
+		logger.Errorw(
+			"Error fetching top NFTs from NFT Stats",
+			"err", err,
+		)
+	}
+
+	var resp []TopNFT
+	for _, nft := range nfts {
+		resp = append(resp, TopNFT{
+			Name:   nft.Name,
+			OSLink: nft.OpenSeaLink,
+			Image:  nft.ImageURL,
+		})
+	}
+
+	return resp
 }
