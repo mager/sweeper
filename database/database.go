@@ -174,9 +174,7 @@ func UpdateCollectionStats(
 			{Path: "sales", Value: utils.RoundFloat(totalSales, 3)},
 			{Path: "supply", Value: utils.RoundFloat(totalSupply, 3)},
 			{Path: "thumb", Value: collection.ImageURL},
-			// {Path: "traits", Value: collection.Collection.Traits},
 			{Path: "updated", Value: now},
-
 			{Path: "topNfts", Value: topNFTs},
 		})
 		if err != nil {
@@ -299,13 +297,12 @@ func GetTopNFTs(ctx context.Context, logger *zap.SugaredLogger, nftstatsClient *
 			"err", err,
 		)
 	}
-
 	var resp []TopNFT
 	for _, nft := range nfts {
 		resp = append(resp, TopNFT{
-			Image:  nft.ImageURL,
+			Image:  nft.Image,
 			Name:   nft.Name,
-			OSLink: nft.OpenSeaLink,
+			OSLink: nft.OSLink,
 		})
 	}
 
