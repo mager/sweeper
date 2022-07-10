@@ -30,9 +30,9 @@ func ProvideNFTStats(cfg config.Config, logger *zap.SugaredLogger) *NFTStatsClie
 var Options = ProvideNFTStats
 
 type NFT struct {
+	ImageURL    string `json:"thumbnailUrl"`
 	Name        string `json:"name"`
 	OpenSeaLink string `json:"openSeaLink"`
-	ImageURL    string `json:"thumbnailUrl"`
 }
 
 type Resp struct {
@@ -87,9 +87,9 @@ func (e *NFTStatsClient) GetTopNFTs(
 	var nfts []NFT
 	for _, nft := range nftStatsResp.Toplists.Three0D.Nft {
 		nfts = append(nfts, NFT{
+			ImageURL:    nft.Imageurl,
 			Name:        nft.Name,
 			OpenSeaLink: nft.Opensealink,
-			ImageURL:    nft.Imageurl,
 		})
 	}
 

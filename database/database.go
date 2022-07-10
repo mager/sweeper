@@ -102,10 +102,9 @@ type Alias struct {
 }
 
 type TopNFT struct {
-	Collection string `firestore:"collection" json:"collection"`
-	Name       string `firestore:"name" json:"name"`
-	OSLink     string `firestore:"osLink" json:"osLink"`
-	Image      string `firestore:"image" json:"image"`
+	Image  string `firestore:"image" json:"image"`
+	Name   string `firestore:"name" json:"name"`
+	OSLink string `firestore:"osLink" json:"osLink"`
 }
 
 // ProvideDB provides a firestore client
@@ -304,9 +303,9 @@ func GetTopNFTs(ctx context.Context, logger *zap.SugaredLogger, nftstatsClient *
 	var resp []TopNFT
 	for _, nft := range nfts {
 		resp = append(resp, TopNFT{
+			Image:  nft.ImageURL,
 			Name:   nft.Name,
 			OSLink: nft.OpenSeaLink,
-			Image:  nft.ImageURL,
 		})
 	}
 
