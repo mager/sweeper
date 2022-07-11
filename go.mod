@@ -1,6 +1,6 @@
 module github.com/mager/sweeper
 
-go 1.16
+go 1.18
 
 require (
 	cloud.google.com/go/bigquery v1.26.0
