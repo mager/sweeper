@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -52,7 +52,6 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 // doUpdateAddresses updates a collection of addresses
 func (h *Handler) doUpdateAddresses() bool {
 	var (
-		ctx         = context.Background()
 		collections = h.Database.Collection("users").Where("shouldIndex", "==", true)
 		iter        = collections.Documents(h.Context)
 		u           database.User
@@ -74,7 +73,7 @@ func (h *Handler) doUpdateAddresses() bool {
 			h.Logger.Error(err)
 		}
 
-		updated := h.updateSingleAddress(ctx, doc)
+		updated := h.updateSingleAddress(doc.Ref.ID)
 		if updated {
 			count++
 		}
@@ -95,9 +94,38 @@ func (h *Handler) doUpdateAddresses() bool {
 	return true
 }
 
-func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.DocumentSnapshot) bool {
+func (h *Handler) updateSingleAddress(a string) bool {
 	var (
-		address        = doc.Ref.ID
+		u       database.User
+		doc     *firestore.DocumentSnapshot
+		err     error
+		address = strings.ToLower(a)
+	)
+
+	doc, err = h.Database.Collection("users").Doc(address).Get(h.Context)
+	if err != nil {
+		h.Logger.Errorf("Error getting user: %v, ading them to the database", err)
+
+		// Add user to the database
+		_, err = h.Database.Collection("users").Doc(address).Set(h.Context, map[string]interface{}{
+			"address": address,
+		})
+		if err != nil {
+			h.Logger.Error(err)
+		}
+		doc, err = h.Database.Collection("users").Doc(address).Get(h.Context)
+		if err != nil {
+			h.Logger.Errorf("Error getting user again: %v, returning", err)
+			return false
+		}
+	}
+
+	err = doc.DataTo(&u)
+	if err != nil {
+		h.Logger.Error(err)
+	}
+
+	var (
 		openseaAssets  = make([]opensea.Asset, 0)
 		collectionsMap = make(map[string]database.WalletCollection)
 	)
@@ -130,7 +158,6 @@ func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.Docume
 				}},
 			}
 		}
-
 	}
 
 	// Construct a wallet object
@@ -150,7 +177,7 @@ func (h *Handler) updateSingleAddress(ctx context.Context, doc *firestore.Docume
 	}
 
 	// Update collections
-	wr, err := doc.Ref.Update(ctx, []firestore.Update{
+	wr, err := doc.Ref.Update(h.Context, []firestore.Update{
 		{Path: "wallet", Value: wallet},
 	})
 
