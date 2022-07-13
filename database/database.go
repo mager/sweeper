@@ -160,7 +160,7 @@ func UpdateCollectionStats(
 		updated      bool
 	)
 
-	if collection.Slug != "" && floor >= 0.001 {
+	if collection.Slug != "" {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
 
 		// Update collection
@@ -227,23 +227,21 @@ func AddCollectionToDB(
 		logger.Error(err)
 		return floor, false
 	}
-	if stat.FloorPrice >= 0.005 {
-		c.Floor = stat.FloorPrice
-		c.MarketCap = stat.MarketCap
-		c.NumOwners = stat.NumOwners
-		c.OneDayVolume = stat.OneDayVolume
-		c.SevenDayVolume = stat.SevenDayVolume
-		c.ThirtyDayVolume = stat.ThirtyDayVolume
-		c.Thumb = collection.ImageURL
-		c.TotalSales = stat.TotalSales
-		c.TotalSupply = stat.TotalSupply
-		c.Slug = slug
-		c.Name = collection.Name
-		_, err := database.Collection("collections").Doc(slug).Set(ctx, c)
-		if err != nil {
-			logger.Error(err)
-			return floor, false
-		}
+	c.Floor = stat.FloorPrice
+	c.MarketCap = stat.MarketCap
+	c.NumOwners = stat.NumOwners
+	c.OneDayVolume = stat.OneDayVolume
+	c.SevenDayVolume = stat.SevenDayVolume
+	c.ThirtyDayVolume = stat.ThirtyDayVolume
+	c.Thumb = collection.ImageURL
+	c.TotalSales = stat.TotalSales
+	c.TotalSupply = stat.TotalSupply
+	c.Slug = slug
+	c.Name = collection.Name
+	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
+	if err != nil {
+		logger.Error(err)
+		return floor, false
 	}
 
 	return floor, true
