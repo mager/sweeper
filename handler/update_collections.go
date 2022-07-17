@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -185,8 +184,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		}
 
 		// Update the floor price
-		var updated bool
-		updated = database.UpdateCollectionStats(
+		updated := database.UpdateCollectionStats(
 			h.Context,
 			h.Logger,
 			h.OpenSea,
@@ -207,18 +205,4 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 	h.Logger.Infof("Updated %d collections", count)
 
 	return true
-}
-
-func (h *Handler) logNoUpdate(doc *firestore.DocumentSnapshot, c Config) {
-	h.Logger.Infow(
-		"Floor not updated",
-		"collection", doc.Ref.ID,
-		"cond", fmt.Sprintf(
-			"%s %.2f %s %.2f",
-			c.updateCond.path,
-			doc.Data()[c.updateCond.path].(float64),
-			c.updateCond.op,
-			c.updateCond.value,
-		),
-	)
 }

@@ -52,7 +52,7 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 // doUpdateAddresses updates a collection of addresses
 func (h *Handler) doUpdateAddresses() bool {
 	var (
-		collections = h.Database.Collection("users").Where("shouldIndex", "==", true)
+		collections = h.Database.Collection("users")
 		iter        = collections.Documents(h.Context)
 		u           database.User
 		count       = 0

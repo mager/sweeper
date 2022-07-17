@@ -6,6 +6,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/etherscan"
@@ -28,6 +29,7 @@ type Handler struct {
 	OpenSea   *opensea.OpenSeaClient
 	Reservoir *reservoir.ReservoirClient
 	Router    *mux.Router
+	Storage   *storage.Client
 }
 
 type Condition struct {
@@ -36,10 +38,9 @@ type Condition struct {
 }
 
 type Config struct {
-	desc       string
-	queryCond  Condition
-	updateCond Condition
-	log        string
+	desc      string
+	queryCond Condition
+	log       string
 }
 
 // New creates a Handler struct
@@ -57,6 +58,8 @@ func (h *Handler) registerRoutes() {
 	h.Router.HandleFunc("/update/users", h.updateUsers).
 		Methods("POST")
 	h.Router.HandleFunc("/update/user", h.updateUser).
+		Methods("POST")
+	h.Router.HandleFunc("/update/user/metadata", h.updateUserMetadata).
 		Methods("POST")
 	h.Router.HandleFunc("/update/stats", h.updateStats).
 		Methods("POST")

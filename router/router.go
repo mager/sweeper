@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
@@ -13,7 +14,7 @@ import (
 func ProvideRouter(lc fx.Lifecycle, logger *zap.SugaredLogger) *mux.Router {
 	var router = mux.NewRouter()
 
-	router.Use(jsonMiddleware)
+	router.Use(jsonMiddleware, lowercaseAddressMiddleware)
 
 	lc.Append(
 		fx.Hook{
@@ -35,6 +36,17 @@ func ProvideRouter(lc fx.Lifecycle, logger *zap.SugaredLogger) *mux.Router {
 func jsonMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func lowercaseAddressMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		address := vars["address"]
+		if address != "" {
+			vars["address"] = strings.ToLower(address)
+		}
 		next.ServeHTTP(w, r)
 	})
 }

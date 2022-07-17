@@ -5,6 +5,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 	"github.com/mager/go-opensea/opensea"
 	bq "github.com/mager/sweeper/bigquery"
@@ -17,6 +18,7 @@ import (
 	os "github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/router"
+	storageClient "github.com/mager/sweeper/storage"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -33,6 +35,7 @@ func main() {
 			os.Options,
 			reservoir.Options,
 			router.Options,
+			storageClient.Options,
 		),
 		fx.Invoke(Register),
 	).Run()
@@ -49,6 +52,7 @@ func Register(
 	openSeaClient *opensea.OpenSeaClient,
 	reservoirClient *reservoir.ReservoirClient,
 	router *mux.Router,
+	storageClient *storage.Client,
 ) {
 	// TODO: Remove global context
 	var ctx = context.Background()
@@ -66,6 +70,7 @@ func Register(
 		OpenSea:   openSeaClient,
 		Reservoir: reservoirClient,
 		Router:    router,
+		Storage:   storageClient,
 	}
 	handler.New(p)
 }

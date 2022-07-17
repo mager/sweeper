@@ -61,6 +61,7 @@ func (h *Handler) doUpdateRandomNFT() bool {
 	if err != nil {
 		h.Logger.Errorf("Error fetching user: %v", err)
 	}
+
 	collection := userData.Wallet.Collections[rand.Intn(len(userData.Wallet.Collections))]
 	nft := collection.NFTs[rand.Intn(len(collection.NFTs))]
 
