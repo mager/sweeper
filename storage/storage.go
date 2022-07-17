@@ -59,6 +59,7 @@ func UploadUserMetadata(
 
 	// Upload file to bucket
 	w := b.Object(fmt.Sprintf("%s.png", address)).NewWriter(ctx)
+	w.CacheControl = "no-cache"
 	w.Write(buf[:n])
 	if err := w.Close(); err != nil {
 		logger.Error(err)
