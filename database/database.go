@@ -15,6 +15,7 @@ import (
 
 var (
 	collectionDenylist = []string{
+		"deadlink123",
 		"down2earth-0day",
 	}
 )
