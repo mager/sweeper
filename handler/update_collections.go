@@ -106,6 +106,7 @@ func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateC
 			h.OpenSea,
 			h.BigQuery,
 			h.NFTStats,
+			h.Reservoir,
 			docsnap,
 		)
 		h.Logger.Infow(
@@ -190,6 +191,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 			h.OpenSea,
 			h.BigQuery,
 			h.NFTStats,
+			h.Reservoir,
 			doc,
 		)
 

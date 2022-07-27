@@ -11,6 +11,7 @@ type Config struct {
 	DiscordAuthToken string
 	InfuraKey        string
 	EtherscanAPIKey  string
+	ReservoirAPIKey  string
 }
 
 func ProvideConfig() Config {

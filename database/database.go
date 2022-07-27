@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/nftstats"
+	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/utils"
 	"go.uber.org/zap"
 )
@@ -21,20 +22,28 @@ var (
 )
 
 type Collection struct {
-	Name            string    `firestore:"name" json:"name"`
-	Thumb           string    `firestore:"thumb" json:"thumb"`
-	Floor           float64   `firestore:"floor" json:"floor"`
-	Slug            string    `firestore:"slug" json:"slug"`
-	OneDayVolume    float64   `firestore:"1d" json:"1d"`
-	SevenDayVolume  float64   `firestore:"7d" json:"7d"`
-	ThirtyDayVolume float64   `firestore:"30d" json:"30d"`
-	MarketCap       float64   `firestore:"cap" json:"cap"`
-	TotalSupply     float64   `firestore:"supply" json:"supply"`
-	NumOwners       int       `firestore:"num" json:"num"`
-	TotalSales      float64   `firestore:"sales" json:"sales"`
-	Updated         time.Time `firestore:"updated" json:"updated"`
+	Name            string      `firestore:"name" json:"name"`
+	Thumb           string      `firestore:"thumb" json:"thumb"`
+	Floor           float64     `firestore:"floor" json:"floor"`
+	Slug            string      `firestore:"slug" json:"slug"`
+	OneDayVolume    float64     `firestore:"1d" json:"1d"`
+	SevenDayVolume  float64     `firestore:"7d" json:"7d"`
+	ThirtyDayVolume float64     `firestore:"30d" json:"30d"`
+	MarketCap       float64     `firestore:"cap" json:"cap"`
+	TotalSupply     float64     `firestore:"supply" json:"supply"`
+	NumOwners       int         `firestore:"num" json:"num"`
+	TotalSales      float64     `firestore:"sales" json:"sales"`
+	Updated         time.Time   `firestore:"updated" json:"updated"`
+	TopNFTs         []TopNFT    `firestore:"topNFTs" json:"topNFTs"`
+	Contract        string      `firestore:"contract" json:"contract"`
+	Attributes      []Attribute `firestore:"attributes" json:"attributes"`
+}
 
-	TopNFTs []TopNFT `firestore:"topNFTs" json:"topNFTs"`
+type Attribute struct {
+	Key   string  `firestore:"key" json:"key"`
+	Value string  `firestore:"value" json:"value"`
+	Floor float64 `firestore:"floor" json:"floor"`
+	Image string  `firestore:"image" json:"image"`
 }
 
 type User struct {
@@ -127,6 +136,7 @@ func UpdateCollectionStats(
 	openSeaClient *opensea.OpenSeaClient,
 	bigQueryClient *bigquery.Client,
 	nftstatsClient *nftstats.NFTStatsClient,
+	reservoirClient *reservoir.ReservoirClient,
 	doc *firestore.DocumentSnapshot,
 ) bool {
 	docID := doc.Ref.ID
@@ -159,7 +169,18 @@ func UpdateCollectionStats(
 		totalSales   = stats.TotalSales
 		now          = time.Now()
 		updated      bool
+		contract     string
+		attritubes   []reservoir.Attribute
 	)
+
+	if len(collection.PrimaryAssetContracts) > 0 {
+		contract = collection.PrimaryAssetContracts[0].Address
+	}
+
+	// Fetch attribute floors from Reservoir
+	if contract != "" {
+		attritubes = reservoirClient.GetAllAttributesForContract(contract)
+	}
 
 	if collection.Slug != "" {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
@@ -177,6 +198,8 @@ func UpdateCollectionStats(
 			{Path: "thumb", Value: collection.ImageURL},
 			{Path: "updated", Value: now},
 			{Path: "topNfts", Value: topNFTs},
+			{Path: "contract", Value: contract},
+			{Path: "attributes", Value: adaptAttributes(attritubes)},
 		})
 		if err != nil {
 			logger.Error(err)
@@ -306,4 +329,30 @@ func GetTopNFTs(ctx context.Context, logger *zap.SugaredLogger, nftstatsClient *
 	}
 
 	return resp
+}
+
+func adaptAttributes(attrs []reservoir.Attribute) []Attribute {
+	var (
+		resp  []Attribute
+		floor float64
+		image string
+	)
+
+	for _, attr := range attrs {
+		if len(attr.FloorAskPrices) > 0 {
+			// Convert to float64
+			floor = attr.FloorAskPrices[0]
+		}
+		if len(attr.SampleImages) > 0 {
+			image = attr.SampleImages[0]
+		}
+		resp = append(resp, Attribute{
+			Key:   attr.Key,
+			Value: attr.Value,
+			Floor: floor,
+			Image: image,
+		})
+	}
+	return resp
+
 }
