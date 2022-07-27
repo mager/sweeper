@@ -178,7 +178,7 @@ func UpdateCollectionStats(
 	}
 
 	// Fetch attribute floors from Reservoir
-	if contract != "" {
+	if contract != "" && floor >= 0.5 {
 		attritubes = reservoirClient.GetAllAttributesForContract(contract)
 	}
 
