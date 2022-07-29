@@ -7,11 +7,9 @@ import (
 )
 
 type Config struct {
-	OpenSeaAPIKey    string
-	DiscordAuthToken string
-	InfuraKey        string
-	EtherscanAPIKey  string
-	ReservoirAPIKey  string
+	OpenSeaAPIKey   string
+	EtherscanAPIKey string
+	ReservoirAPIKey string
 }
 
 func ProvideConfig() Config {
