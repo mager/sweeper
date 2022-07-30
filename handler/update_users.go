@@ -73,7 +73,8 @@ func (h *Handler) doUpdateAddresses() bool {
 			h.Logger.Error(err)
 		}
 
-		updated := h.updateSingleAddress(doc.Ref.ID)
+		h.Logger.Info("Updating user: %s", doc.Ref.ID)
+		updated := h.Sweeper.UpdateUser(doc.Ref.ID)
 		if updated {
 			count++
 		}

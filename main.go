@@ -19,6 +19,8 @@ import (
 	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/router"
 	storageClient "github.com/mager/sweeper/storage"
+	"github.com/mager/sweeper/sweeper"
+	sweeperClient "github.com/mager/sweeper/sweeper"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -36,6 +38,7 @@ func main() {
 			reservoir.Options,
 			router.Options,
 			storageClient.Options,
+			sweeperClient.Options,
 		),
 		fx.Invoke(Register),
 	).Run()
@@ -53,6 +56,7 @@ func Register(
 	reservoirClient *reservoir.ReservoirClient,
 	router *mux.Router,
 	storageClient *storage.Client,
+	sweeperClient *sweeper.SweeperClient,
 ) {
 	// TODO: Remove global context
 	var ctx = context.Background()
@@ -71,6 +75,7 @@ func Register(
 		Reservoir: reservoirClient,
 		Router:    router,
 		Storage:   storageClient,
+		Sweeper:   sweeperClient,
 	}
 	handler.New(p)
 }

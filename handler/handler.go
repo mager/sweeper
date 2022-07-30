@@ -12,6 +12,7 @@ import (
 	"github.com/mager/sweeper/etherscan"
 	"github.com/mager/sweeper/nftstats"
 	"github.com/mager/sweeper/reservoir"
+	"github.com/mager/sweeper/sweeper"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -30,6 +31,7 @@ type Handler struct {
 	Reservoir *reservoir.ReservoirClient
 	Router    *mux.Router
 	Storage   *storage.Client
+	Sweeper   *sweeper.SweeperClient
 }
 
 type Condition struct {
