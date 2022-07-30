@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/mager/go-opensea/opensea"
+	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
 	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/utils"
@@ -226,10 +227,12 @@ func UpdateCollectionStats(
 func AddCollectionToDB(
 	ctx context.Context,
 	openSeaClient *opensea.OpenSeaClient,
+	nftFloorPriceClient *nftfloorprice.NFTFloorPriceClient,
 	logger *zap.SugaredLogger,
 	database *firestore.Client,
 	slug string,
 ) (float64, bool) {
+	var err error
 	// If slug is in collectionDenylist, return
 	if utils.Contains(collectionDenylist, slug) {
 		logger.Infow("Collection is in denylist", "collection", slug)
@@ -240,16 +243,38 @@ func AddCollectionToDB(
 		Updated: time.Now(),
 	}
 	floor := 0.0
-
 	// Get collection from OpenSea
-	collection, err := openSeaClient.GetCollection(slug)
-	stat := collection.Stats
-	floor = stat.FloorPrice
+	floor = getCollectionFromOpenSeaAndUpdateC(&c, slug, logger, openSeaClient)
+	if slug == "cryptopunks" {
+		// Fetch floor from NFT Floor Price
+		floor, err = nftFloorPriceClient.GetFloorPriceFromCollection(slug)
+		if err != nil {
+			logger.Error(err)
+		}
 
+		logger.Infow("Fetched floor from NFT Floor Price", "slug", slug, "floor", floor)
+		c.Floor = floor
+	}
+	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
 	if err != nil {
 		logger.Error(err)
 		return floor, false
 	}
+
+	return floor, true
+}
+
+func getCollectionFromOpenSeaAndUpdateC(c *Collection, slug string, logger *zap.SugaredLogger, openSeaClient *opensea.OpenSeaClient) float64 {
+	// Get collection from OpenSea
+	collection, err := openSeaClient.GetCollection(slug)
+	stat := collection.Stats
+	if err != nil {
+		logger.Error(err)
+		return 0.0
+	}
+
+	logger.Infow("Fetched floor price from OpenSea", "collection", slug, "floor", stat.FloorPrice)
+
 	c.Floor = stat.FloorPrice
 	c.MarketCap = stat.MarketCap
 	c.NumOwners = stat.NumOwners
@@ -261,13 +286,8 @@ func AddCollectionToDB(
 	c.TotalSupply = stat.TotalSupply
 	c.Slug = slug
 	c.Name = collection.Name
-	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
-	if err != nil {
-		logger.Error(err)
-		return floor, false
-	}
 
-	return floor, true
+	return stat.FloorPrice
 }
 
 func DeleteCollection(

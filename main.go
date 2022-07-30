@@ -14,12 +14,12 @@ import (
 	"github.com/mager/sweeper/etherscan"
 	"github.com/mager/sweeper/handler"
 	"github.com/mager/sweeper/logger"
+	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
 	os "github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/router"
 	storageClient "github.com/mager/sweeper/storage"
-	"github.com/mager/sweeper/sweeper"
 	sweeperClient "github.com/mager/sweeper/sweeper"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -33,6 +33,7 @@ func main() {
 			database.Options,
 			etherscan.Options,
 			logger.Options,
+			nftfloorprice.Options,
 			nftstats.Options,
 			os.Options,
 			reservoir.Options,
@@ -51,12 +52,13 @@ func Register(
 	database *firestore.Client,
 	etherscan *etherscan.EtherscanClient,
 	logger *zap.SugaredLogger,
+	nftFloorPrice *nftfloorprice.NFTFloorPriceClient,
 	nftstats *nftstats.NFTStatsClient,
 	openSeaClient *opensea.OpenSeaClient,
 	reservoirClient *reservoir.ReservoirClient,
 	router *mux.Router,
 	storageClient *storage.Client,
-	sweeperClient *sweeper.SweeperClient,
+	sweeperClient *sweeperClient.SweeperClient,
 ) {
 	// TODO: Remove global context
 	var ctx = context.Background()
@@ -65,17 +67,18 @@ func Register(
 	//	bot.New(ctx, dg, logger, database, openSeaClient)
 
 	p := handler.Handler{
-		BigQuery:  bq,
-		Context:   ctx,
-		Database:  database,
-		Etherscan: etherscan,
-		Logger:    logger,
-		NFTStats:  nftstats,
-		OpenSea:   openSeaClient,
-		Reservoir: reservoirClient,
-		Router:    router,
-		Storage:   storageClient,
-		Sweeper:   sweeperClient,
+		BigQuery:      bq,
+		Context:       ctx,
+		Database:      database,
+		Etherscan:     etherscan,
+		Logger:        logger,
+		NFTFloorPrice: nftFloorPrice,
+		NFTStats:      nftstats,
+		OpenSea:       openSeaClient,
+		Reservoir:     reservoirClient,
+		Router:        router,
+		Storage:       storageClient,
+		Sweeper:       sweeperClient,
 	}
 	handler.New(p)
 }

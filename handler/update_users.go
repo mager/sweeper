@@ -213,7 +213,7 @@ func (h *Handler) updateSingleAddress(a string) bool {
 
 	for _, docsnap := range docsnaps {
 		if !docsnap.Exists() {
-			database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, docsnap.Ref.ID)
+			database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
 			time.Sleep(time.Millisecond * 250)
 		}
 	}
