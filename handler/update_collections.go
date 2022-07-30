@@ -24,6 +24,7 @@ var (
 
 type UpdateCollectionsReq struct {
 	CollectionType CollectionType `json:"collection_type"`
+	StartAt        string         `json:"start_at"`
 	Slug           string         `json:"slug"`
 	Slugs          []string       `json:"slugs"`
 }
@@ -46,13 +47,6 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 
 	h.Logger.Infow("Updating collections", "collection_type", req.CollectionType, "slug", req.Slug)
 
-	// Update multiple collections by slug
-	if len(req.Slugs) > 0 {
-		resp.Success = h.updateCollectionsBySlugs(req, &resp)
-		json.NewEncoder(w).Encode(resp)
-		return
-	}
-
 	if req.CollectionType == "" {
 		if req.Slug == "" {
 			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
@@ -63,43 +57,19 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 		resp.Success = updateResp.Success
 		resp.Collection = updateResp.Collection
 	} else {
-		resp.Success = h.updateCollectionsByType(req.CollectionType)
+		resp.Success = h.updateCollectionsByType(req)
 	}
 
 	json.NewEncoder(w).Encode(resp)
 }
 
-// updateCollectionsBySlugs updates a single collection
-func (h *Handler) updateCollectionsBySlugs(req UpdateCollectionsReq, resp *UpdateCollectionsResp) bool {
-	var (
-		slugs              = req.Slugs
-		updatedCollections int
-	)
-
-	for _, slug := range slugs {
-		_, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, slug)
-		time.Sleep(time.Millisecond * 250)
-		if updated {
-			updatedCollections++
-		}
-
-	}
-
-	h.Logger.Infow(
-		"Collections updated",
-		"slugs", slugs,
-	)
-
-	return len(slugs) == updatedCollections
-}
-
 // updateCollectionsByType updates the collections in the database based on a custom config
-func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
+func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) bool {
 	// Fetch config
-	c, found := UpdateCollectionsConfig[collectionType]
+	c, found := UpdateCollectionsConfig[r.CollectionType]
 
 	if !found {
-		h.Logger.Errorf("Invalid collection type: %s", collectionType)
+		h.Logger.Errorf("Invalid collection type: %s", r.CollectionType)
 		return false
 	}
 
@@ -111,6 +81,9 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 
 	if c.queryCond.path != "" {
 		iter = collections.Where(c.queryCond.path, c.queryCond.op, c.queryCond.value).Documents(h.Context)
+	} else if r.StartAt != "" {
+		h.Logger.Infow("Updating all collections starting with collection", "startAt", r.StartAt)
+		iter = collections.OrderBy(firestore.DocumentID, firestore.Asc).StartAt(r.StartAt).Documents(h.Context)
 	} else {
 		h.Logger.Info("Updating all collections")
 		iter = collections.Documents(h.Context)
@@ -138,7 +111,7 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		// 	h.Reservoir,
 		// 	doc,
 		// )
-		h.Logger.Info("Updating collection", "collection", doc.Ref.ID)
+		h.Logger.Infow("Updating collection", "collection", doc.Ref.ID)
 		updatedResp := h.Sweeper.UpdateCollection(doc.Ref.ID)
 
 		// Sleep because OpenSea throttles requests
