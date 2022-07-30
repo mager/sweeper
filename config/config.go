@@ -10,6 +10,7 @@ type Config struct {
 	OpenSeaAPIKey   string
 	EtherscanAPIKey string
 	ReservoirAPIKey string
+	SweeperHost     string
 }
 
 func ProvideConfig() Config {

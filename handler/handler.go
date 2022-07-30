@@ -54,6 +54,8 @@ func New(h Handler) *Handler {
 // RegisterRoutes registers all the routes for the route handler
 func (h *Handler) registerRoutes() {
 	// Update collections
+	h.Router.HandleFunc("/update/collection/{slug}", h.updateCollection).
+		Methods("POST")
 	h.Router.HandleFunc("/update/collections", h.updateCollections).
 		Methods("POST")
 	// Update users

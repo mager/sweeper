@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mager/sweeper/config"
+	"github.com/mager/sweeper/database"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +21,7 @@ type SweeperClient struct {
 }
 
 // ProvideSweeper provides an HTTP client
-func ProvideSweeper(logger *zap.SugaredLogger) *SweeperClient {
+func ProvideSweeper(cfg config.Config, logger *zap.SugaredLogger) *SweeperClient {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -31,14 +33,15 @@ func ProvideSweeper(logger *zap.SugaredLogger) *SweeperClient {
 			Transport: tr,
 		},
 		logger:   logger,
-		basePath: "https://sweeper.floor.report",
+		basePath: cfg.SweeperHost,
 	}
 }
 
 var Options = ProvideSweeper
 
 type UpdateResp struct {
-	Success bool `json:"success"`
+	Success    bool                `json:"success"`
+	Collection database.Collection `json:"collection"`
 }
 
 // AddCollection adds a collection to the database
@@ -113,6 +116,42 @@ func (s *SweeperClient) AddCollections(slugs []string) bool {
 	time.Sleep(time.Millisecond * 250)
 
 	return true
+}
+
+// UpdateCollection updates a single collection
+func (s *SweeperClient) UpdateCollection(slug string) *UpdateResp {
+	updateResp := &UpdateResp{}
+
+	u, err := url.Parse(fmt.Sprintf("%s/update/collection/%s", s.basePath, slug))
+	if err != nil {
+		s.logger.Error(err)
+		return updateResp
+	}
+	q := u.Query()
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(nil))
+	if err != nil {
+		s.logger.Error(err)
+		return updateResp
+	}
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		s.logger.Error(err)
+		return updateResp
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&updateResp)
+	if err != nil {
+		s.logger.Error(err)
+		return updateResp
+	}
+
+	time.Sleep(time.Millisecond * 250)
+
+	return updateResp
 }
 
 // UpdateUser adds a user to the database

@@ -44,6 +44,8 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.Logger.Infow("Updating collections", "collection_type", req.CollectionType, "slug", req.Slug)
+
 	// Update multiple collections by slug
 	if len(req.Slugs) > 0 {
 		resp.Success = h.updateCollectionsBySlugs(req, &resp)
@@ -56,73 +58,15 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
 			return
 		}
-		resp.Collection, resp.Success = h.updateSingleCollection(req, &resp)
+		// resp.Collection, resp.Success = h.updateSingleCollection(req, &resp)
+		updateResp := h.Sweeper.UpdateCollection(req.Slug)
+		resp.Success = updateResp.Success
+		resp.Collection = updateResp.Collection
 	} else {
 		resp.Success = h.updateCollectionsByType(req.CollectionType)
 	}
 
 	json.NewEncoder(w).Encode(resp)
-}
-
-// updateSingleCollection updates a single collection
-func (h *Handler) updateSingleCollection(req UpdateCollectionsReq, resp *UpdateCollectionsResp) (database.Collection, bool) {
-	var (
-		err        error
-		floor      float64
-		collection database.Collection
-		updated    bool
-		slug       = req.Slug
-	)
-
-	docsnap, err := h.Database.Collection("collections").Doc(slug).Get(h.Context)
-
-	if err != nil {
-		h.Logger.Errorw(
-			"Error fetching collection from Firestore, trying to add collection",
-			"err", err,
-		)
-		floor, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.Logger, h.Database, slug)
-		h.Logger.Infow(
-			"Collection added",
-			"collection", slug,
-			"floor", floor,
-			"updated", updated,
-		)
-
-		if updated {
-			// Fetch collection
-			collection = database.GetCollection(h.Context, h.Logger, h.Database, req.Slug)
-		}
-
-		return collection, updated
-	}
-
-	if docsnap.Exists() {
-		// Update collection
-		h.Logger.Info("Collection found, updating")
-		updated = database.UpdateCollectionStats(
-			h.Context,
-			h.Logger,
-			h.OpenSea,
-			h.BigQuery,
-			h.NFTStats,
-			h.Reservoir,
-			docsnap,
-		)
-		h.Logger.Infow(
-			"Collection updated",
-			"collection", docsnap.Ref.ID,
-			"floor", floor,
-			"updated", updated,
-		)
-	}
-
-	if updated {
-		// Fetch collection
-		collection = database.GetCollection(h.Context, h.Logger, h.Database, req.Slug)
-	}
-
-	return collection, updated
 }
 
 // updateCollectionsBySlugs updates a single collection
@@ -185,21 +129,23 @@ func (h *Handler) updateCollectionsByType(collectionType CollectionType) bool {
 		}
 
 		// Update the floor price
-		updated := database.UpdateCollectionStats(
-			h.Context,
-			h.Logger,
-			h.OpenSea,
-			h.BigQuery,
-			h.NFTStats,
-			h.Reservoir,
-			doc,
-		)
+		// updated := database.UpdateCollectionStats(
+		// 	h.Context,
+		// 	h.Logger,
+		// 	h.OpenSea,
+		// 	h.BigQuery,
+		// 	h.NFTStats,
+		// 	h.Reservoir,
+		// 	doc,
+		// )
+		h.Logger.Info("Updating collection", "collection", doc.Ref.ID)
+		updatedResp := h.Sweeper.UpdateCollection(doc.Ref.ID)
 
 		// Sleep because OpenSea throttles requests
 		// Rate limit is 4 requests per second
 		time.Sleep(time.Millisecond * 250)
 
-		if updated {
+		if updatedResp.Success {
 			count++
 		}
 	}
