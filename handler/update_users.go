@@ -197,7 +197,6 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	var (
 		collectionSlugDocs    = make([]*firestore.DocumentRef, 0)
 		slugToOSCollectionMap = make(map[string]database.WalletCollection)
-		// collectionMap         = make(map[string]database.Collection)
 	)
 
 	for _, collection := range wallet.Collections {

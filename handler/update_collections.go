@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"github.com/mager/sweeper/database"
 	"google.golang.org/api/iterator"
 )
 
@@ -30,8 +29,8 @@ type UpdateCollectionsReq struct {
 }
 
 type UpdateCollectionsResp struct {
-	Success    bool                `json:"success"`
-	Collection database.Collection `json:"collection"`
+	Success bool `json:"success"`
+	Count   int  `json:"count"`
 }
 
 func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
@@ -52,25 +51,24 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
 			return
 		}
-		// resp.Collection, resp.Success = h.updateSingleCollection(req, &resp)
 		updateResp := h.Sweeper.UpdateCollection(req.Slug)
 		resp.Success = updateResp.Success
-		resp.Collection = updateResp.Collection
 	} else {
-		resp.Success = h.updateCollectionsByType(req)
+		resp = h.updateCollectionsByType(req)
 	}
 
 	json.NewEncoder(w).Encode(resp)
 }
 
 // updateCollectionsByType updates the collections in the database based on a custom config
-func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) bool {
+func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) UpdateCollectionsResp {
 	// Fetch config
 	c, found := UpdateCollectionsConfig[r.CollectionType]
 
+	var resp = UpdateCollectionsResp{}
 	if !found {
 		h.Logger.Errorf("Invalid collection type: %s", r.CollectionType)
-		return false
+		return resp
 	}
 
 	var (
@@ -79,14 +77,18 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) bool {
 		iter        *firestore.DocumentIterator
 	)
 
+	// Unused for now
 	if c.queryCond.path != "" {
 		iter = collections.Where(c.queryCond.path, c.queryCond.op, c.queryCond.value).Documents(h.Context)
+		// If it gets stuck, you can pick a collection to start at
 	} else if r.StartAt != "" {
 		h.Logger.Infow("Updating all collections starting with collection", "startAt", r.StartAt)
 		iter = collections.OrderBy(firestore.DocumentID, firestore.Asc).StartAt(r.StartAt).Documents(h.Context)
+		// Otherwise only update collections that haven't been updated in over 12 hours
 	} else {
-		h.Logger.Info("Updating all collections")
-		iter = collections.Documents(h.Context)
+		h.Logger.Info("Updating all collections that haven't been updated in 12 hours")
+		updatedSince := time.Now().Add(-12 * time.Hour)
+		iter = collections.Where("updated", "<", updatedSince).Documents(h.Context)
 	}
 
 	defer iter.Stop()
@@ -101,16 +103,6 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) bool {
 			h.Logger.Error(err)
 		}
 
-		// Update the floor price
-		// updated := database.UpdateCollectionStats(
-		// 	h.Context,
-		// 	h.Logger,
-		// 	h.OpenSea,
-		// 	h.BigQuery,
-		// 	h.NFTStats,
-		// 	h.Reservoir,
-		// 	doc,
-		// )
 		h.Logger.Infow("Updating collection", "collection", doc.Ref.ID)
 		updatedResp := h.Sweeper.UpdateCollection(doc.Ref.ID)
 
@@ -125,5 +117,8 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) bool {
 
 	h.Logger.Infof("Updated %d collections", count)
 
-	return true
+	resp.Success = true
+	resp.Count = count
+
+	return resp
 }

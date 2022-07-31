@@ -74,6 +74,10 @@ func (e *NFTStatsClient) GetTopNFTs(
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == 404 {
+		return []NFT{}, nil
+	}
+
 	var nftStatsResp Resp
 	err = json.NewDecoder(resp.Body).Decode(&nftStatsResp)
 	if err != nil {

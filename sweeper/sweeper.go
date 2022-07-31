@@ -76,8 +76,6 @@ func (s *SweeperClient) AddCollection(slug string) bool {
 		return false
 	}
 
-	time.Sleep(time.Millisecond * 250)
-
 	return true
 }
 
@@ -148,8 +146,6 @@ func (s *SweeperClient) UpdateCollection(slug string) *UpdateResp {
 		s.logger.Error(err)
 		return updateResp
 	}
-
-	time.Sleep(time.Millisecond * 250)
 
 	return updateResp
 }
