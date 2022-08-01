@@ -72,6 +72,7 @@ func (h *Handler) doUpdateRandomNFT() bool {
 		"imageUrl":       nft.ImageURL,
 		"name":           nft.Name,
 		"owner":          getOwner(u, userData),
+		"ownerName":      userData.Name,
 		"updated":        time.Now(),
 	}, firestore.MergeAll)
 
