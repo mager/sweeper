@@ -84,10 +84,10 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) UpdateCollecti
 	} else if r.StartAt != "" {
 		h.Logger.Infow("Updating all collections starting with collection", "startAt", r.StartAt)
 		iter = collections.OrderBy(firestore.DocumentID, firestore.Asc).StartAt(r.StartAt).Documents(h.Context)
-		// Otherwise only update collections that haven't been updated in over 12 hours
+		// Otherwise only update collections that haven't been updated in over 24 hours
 	} else {
-		h.Logger.Info("Updating all collections that haven't been updated in 12 hours")
-		updatedSince := time.Now().Add(-12 * time.Hour)
+		h.Logger.Info("Updating all collections that haven't been updated in 24 hours")
+		updatedSince := time.Now().Add(-24 * time.Hour)
 		iter = collections.Where("updated", "<", updatedSince).Documents(h.Context)
 	}
 
