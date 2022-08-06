@@ -58,7 +58,7 @@ func (r *ReservoirClient) GetAttributesForContract(contract string, offset int) 
 
 	q := u.Query()
 	q.Set("maxFloorAskPrices", "1")
-	q.Set("limit", "50")
+	q.Set("limit", "72")
 	q.Set("offset", fmt.Sprintf("%d", offset))
 
 	u.RawQuery = q.Encode()
