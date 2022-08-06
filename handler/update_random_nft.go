@@ -25,17 +25,18 @@ func (h *Handler) updateRandomNFT(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// TODO: Optimize this function
 func (h *Handler) doUpdateRandomNFT() bool {
 	var (
-		docs        = make([]*firestore.DocumentRef, 0)
-		collections = h.Database.Collection("users")
+		docs  = make([]*firestore.DocumentRef, 0)
+		users = h.Database.Collection("users")
 	)
 
 	// Initialize local pseudorandom generator
 	rand.Seed(time.Now().Unix())
 
 	// Fetch a random user
-	iter := collections.Documents(h.Context)
+	iter := users.Where("isFren", "==", true).Documents(h.Context)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
