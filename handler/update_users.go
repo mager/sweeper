@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -135,17 +134,15 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	// Fetch the user's collections & NFTs from OpenSea
 	openseaAssets = h.getOpenSeaAssets(address)
 	h.Logger.Infow("Fetched OpenSea assets", "address", address, "count", len(openseaAssets))
-
 	// Create a list of wallet collections
 	for _, asset := range openseaAssets {
 		// If we do have a collection for this asset, add to it
 		if _, ok := collectionsMap[asset.Collection.Slug]; ok {
 			w := collectionsMap[asset.Collection.Slug]
 			w.NFTs = append(w.NFTs, database.WalletAsset{
-				Name:       asset.Name,
-				ImageURL:   asset.ImageURL,
-				TokenID:    asset.TokenID,
-				Attributes: adaptTraits(asset.Traits),
+				Name:     asset.Name,
+				ImageURL: asset.ImageURL,
+				TokenID:  asset.TokenID,
 			})
 			collectionsMap[asset.Collection.Slug] = w
 			continue
@@ -156,72 +153,28 @@ func (h *Handler) updateSingleAddress(a string) bool {
 				Slug:     asset.Collection.Slug,
 				ImageURL: asset.Collection.ImageURL,
 				NFTs: []database.WalletAsset{{
-					Name:       asset.Name,
-					TokenID:    asset.TokenID,
-					ImageURL:   asset.ImageURL,
-					Attributes: adaptTraits(asset.Traits),
+					Name:     asset.Name,
+					TokenID:  asset.TokenID,
+					ImageURL: asset.ImageURL,
 				}},
 			}
 		}
 	}
 
 	// Construct a wallet object
-	var userCollections = make([]database.WalletCollection, 0)
+	var collections = make([]database.WalletCollection, 0)
 	for _, collection := range collectionsMap {
-		userCollections = append(userCollections, collection)
+		collections = append(collections, collection)
 	}
 
-	if len(userCollections) == 0 {
+	if len(collections) == 0 {
 		h.Logger.Info("No collections found for user", address)
 		return false
 	}
 
 	wallet := database.Wallet{
-		UpdatedAt: time.Now(),
-	}
-
-	// Make sure the collections exist in the database
-	var (
-		collectionSlugDocs    = make([]*firestore.DocumentRef, 0)
-		slugToOSCollectionMap = make(map[string]database.WalletCollection)
-	)
-
-	for _, collection := range wallet.Collections {
-		collectionSlugDocs = append(collectionSlugDocs, h.Database.Collection("collections").Doc(collection.Slug))
-		slugToOSCollectionMap[collection.Slug] = collection
-	}
-
-	docsnaps, err := h.Database.GetAll(h.Context, collectionSlugDocs)
-	if err != nil {
-		h.Logger.Error(err)
-		return false
-	}
-
-	for _, docsnap := range docsnaps {
-		if !docsnap.Exists() {
-			h.Logger.Infof("Collection %s does not exist, adding", docsnap.Ref.ID)
-			database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
-			time.Sleep(time.Millisecond * 250)
-			database.UpdateCollectionStats(h.Context, h.Logger, h.OpenSea, h.BigQuery, h.NFTStats, h.Reservoir, docsnap)
-			time.Sleep(time.Millisecond * 250)
-		}
-	}
-
-	// TODO: Newly added collections won't have NFT prices yet
-	// Update specific floor NFTs
-	for _, collection := range userCollections {
-		h.Logger.Info("Updating collection: ", collection.Slug)
-		// pretty.Print(collection)
-	}
-
-	// TODO: Remove attributes (no need to save in db)
-	for _, collection := range userCollections {
-		wallet.Collections = append(wallet.Collections, database.WalletCollection{
-			Name:     collection.Name,
-			Slug:     collection.Slug,
-			ImageURL: collection.ImageURL,
-			NFTs:     adaptNFTs(collection.NFTs),
-		})
+		Collections: collections,
+		UpdatedAt:   time.Now(),
 	}
 
 	// Update collections
@@ -240,40 +193,29 @@ func (h *Handler) updateSingleAddress(a string) bool {
 		"updated", wr.UpdateTime,
 	)
 
-	return true
-}
+	// Make sure the collections exist in our database
+	var (
+		collectionSlugDocs    = make([]*firestore.DocumentRef, 0)
+		slugToOSCollectionMap = make(map[string]database.WalletCollection)
+	)
 
-func adaptNFTs(nfts []database.WalletAsset) []database.WalletAsset {
-	var adapted = make([]database.WalletAsset, len(nfts))
-	for _, nft := range nfts {
-		adapted = append(nfts, database.WalletAsset{
-			Name:     nft.Name,
-			ImageURL: nft.ImageURL,
-			TokenID:  nft.TokenID,
-		})
+	for _, collection := range wallet.Collections {
+		collectionSlugDocs = append(collectionSlugDocs, h.Database.Collection("collections").Doc(collection.Slug))
+		slugToOSCollectionMap[collection.Slug] = collection
 	}
-	return adapted
-}
 
-func adaptTraits(traits []opensea.AssetTrait) []database.Attribute {
-	var attributes []database.Attribute
-	// TODO: Use generics
-	for _, trait := range traits {
-		// Convert trait.Value to string
-		var value string
-		switch trait.Value.(type) {
-		case string:
-			value = trait.Value.(string)
-		case int:
-			value = strconv.Itoa(trait.Value.(int))
-		case float64:
-			value = strconv.FormatFloat(trait.Value.(float64), 'f', -1, 64)
+	docsnaps, err := h.Database.GetAll(h.Context, collectionSlugDocs)
+	if err != nil {
+		h.Logger.Error(err)
+		return false
+	}
+
+	for _, docsnap := range docsnaps {
+		if !docsnap.Exists() {
+			database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
+			time.Sleep(time.Millisecond * 250)
 		}
-
-		attributes = append(attributes, database.Attribute{
-			Key:   trait.TraitType,
-			Value: value,
-		})
 	}
-	return attributes
+
+	return true
 }

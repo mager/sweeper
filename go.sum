@@ -207,13 +207,11 @@ github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/X
 github.com/kelseyhightower/envconfig v1.4.0 h1:Im6hONhd3pLkfDFsbRgu68RDNkGF1r3dvMUtDTo2cv8=
 github.com/kelseyhightower/envconfig v1.4.0/go.mod h1:cccZRl6mQpaq41TPp5QxidR+Sa3axMbJDNb//FQX6Gg=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
-github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/mager/go-opensea v0.3.3 h1:3gO3D4v4+rd6x1h6n/PhKtPer5+DLAV6t2GrLq9Gwlk=
-github.com/mager/go-opensea v0.3.3/go.mod h1:9AUKK6NRcdKfTQOkUGodk62ey6ZtAGuuDNU3NAEkfgg=
+github.com/mager/go-opensea v0.2.0 h1:gYTEw3mL3SCS/vLHjVZ9nCk7cFDHXnVbERiQDE4Yaqg=
+github.com/mager/go-opensea v0.2.0/go.mod h1:9AUKK6NRcdKfTQOkUGodk62ey6ZtAGuuDNU3NAEkfgg=
 github.com/nanmu42/etherscan-api v1.8.0 h1:Ld9a6eQQO5uSLbZZHyv6VPKyyqMjPPfp+MeXSHYMNv8=
 github.com/nanmu42/etherscan-api v1.8.0/go.mod h1:CmsVjoXu6wovJhK0WfLhdmQerFqVFKypHdSgjfM43H8=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=

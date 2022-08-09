@@ -10,8 +10,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kr/pretty v0.1.0
-	github.com/mager/go-opensea v0.3.3
+	github.com/mager/go-opensea v0.2.0
 	github.com/nanmu42/etherscan-api v1.8.0
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/dig v1.14.1 // indirect
