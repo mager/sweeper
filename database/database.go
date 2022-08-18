@@ -18,6 +18,8 @@ import (
 var (
 	collectionDenylist = []string{
 		"deadlink123",
+		"heir-game",
+		"spritelites",
 	}
 )
 
