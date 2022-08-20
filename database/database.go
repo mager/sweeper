@@ -78,9 +78,11 @@ type WalletCollection struct {
 }
 
 type WalletAsset struct {
-	Name     string `firestore:"name" json:"name"`
-	TokenID  string `firestore:"tokenId" json:"tokenId"`
-	ImageURL string `firestore:"imageUrl" json:"imageUrl"`
+	Name       string      `firestore:"name" json:"name"`
+	TokenID    string      `firestore:"tokenId" json:"tokenId"`
+	ImageURL   string      `firestore:"imageUrl" json:"imageUrl"`
+	Attributes []Attribute `firestore:"attributes" json:"attributes"`
+	Floor      float64     `firestore:"floor" json:"floor"`
 }
 
 type Trait struct {
@@ -257,6 +259,7 @@ func AddCollectionToDB(
 		logger.Infow("Fetched floor from NFT Floor Price", "slug", slug, "floor", floor)
 		c.Floor = floor
 	}
+	// Add collection to db
 	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
 	if err != nil {
 		logger.Error(err)
