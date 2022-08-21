@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,10 +54,10 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 // doUpdateAddresses updates a collection of addresses
 func (h *Handler) doUpdateAddresses() bool {
 	var (
-		collections = h.Database.Collection("users")
-		iter        = collections.Documents(h.Context)
-		u           database.User
-		count       = 0
+		users = h.Database.Collection("users")
+		iter  = users.Documents(h.Context)
+		u     database.User
+		count = 0
 	)
 
 	// Fetch users from Firestore
@@ -97,24 +99,26 @@ func (h *Handler) doUpdateAddresses() bool {
 
 func (h *Handler) updateSingleAddress(a string) bool {
 	var (
-		u       database.User
-		doc     *firestore.DocumentSnapshot
-		err     error
-		address = strings.ToLower(a)
+		u           database.User
+		doc         *firestore.DocumentSnapshot
+		err         error
+		address     = strings.ToLower(a)
+		users       = h.Database.Collection("users")
+		collections = h.Database.Collection("collections")
 	)
 
-	doc, err = h.Database.Collection("users").Doc(address).Get(h.Context)
+	doc, err = users.Doc(address).Get(h.Context)
 	if err != nil {
 		h.Logger.Errorf("Error getting user: %v, ading them to the database", err)
 
 		// Add user to the database
-		_, err = h.Database.Collection("users").Doc(address).Set(h.Context, map[string]interface{}{
+		_, err = users.Doc(address).Set(h.Context, map[string]interface{}{
 			"address": address,
 		})
 		if err != nil {
 			h.Logger.Error(err)
 		}
-		doc, err = h.Database.Collection("users").Doc(address).Get(h.Context)
+		doc, err = users.Doc(address).Get(h.Context)
 		if err != nil {
 			h.Logger.Errorf("Error getting user again: %v, returning", err)
 			return false
@@ -140,9 +144,10 @@ func (h *Handler) updateSingleAddress(a string) bool {
 		if _, ok := collectionsMap[asset.Collection.Slug]; ok {
 			w := collectionsMap[asset.Collection.Slug]
 			w.NFTs = append(w.NFTs, database.WalletAsset{
-				Name:     asset.Name,
-				ImageURL: asset.ImageURL,
-				TokenID:  asset.TokenID,
+				Name:       asset.Name,
+				ImageURL:   asset.ImageURL,
+				TokenID:    asset.TokenID,
+				Attributes: adaptTraits(asset.Traits),
 			})
 			collectionsMap[asset.Collection.Slug] = w
 			continue
@@ -153,27 +158,69 @@ func (h *Handler) updateSingleAddress(a string) bool {
 				Slug:     asset.Collection.Slug,
 				ImageURL: asset.Collection.ImageURL,
 				NFTs: []database.WalletAsset{{
-					Name:     asset.Name,
-					TokenID:  asset.TokenID,
-					ImageURL: asset.ImageURL,
+					Name:       asset.Name,
+					TokenID:    asset.TokenID,
+					ImageURL:   asset.ImageURL,
+					Attributes: adaptTraits(asset.Traits),
 				}},
 			}
 		}
 	}
 
 	// Construct a wallet object
-	var collections = make([]database.WalletCollection, 0)
+	var walletCollections = make([]database.WalletCollection, 0)
 	for _, collection := range collectionsMap {
-		collections = append(collections, collection)
+		walletCollections = append(walletCollections, collection)
 	}
 
-	if len(collections) == 0 {
+	if len(walletCollections) == 0 {
 		h.Logger.Info("No collections found for user", address)
 		return false
 	}
 
+	// Make sure the collections exist in our database
+	var (
+		collectionSlugDocs    = make([]*firestore.DocumentRef, 0)
+		slugToOSCollectionMap = make(map[string]database.WalletCollection)
+	)
+
+	for _, collection := range walletCollections {
+		collectionSlugDocs = append(collectionSlugDocs, collections.Doc(collection.Slug))
+		slugToOSCollectionMap[collection.Slug] = collection
+	}
+
+	docsnaps, err := h.Database.GetAll(h.Context, collectionSlugDocs)
+	if err != nil {
+		h.Logger.Error(err)
+		return false
+	}
+
+	var collectionAttributesMap = make(map[string][]database.Attribute)
+	var collectionFloorMap = make(map[string]float64)
+	for _, docsnap := range docsnaps {
+		if !docsnap.Exists() {
+			h.Logger.Infof("Collection %s does not exist, adding", docsnap.Ref.ID)
+
+			database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
+			time.Sleep(time.Millisecond * 250)
+
+			database.UpdateCollectionStats(h.Context, h.Logger, h.OpenSea, h.BigQuery, h.NFTStats, h.Reservoir, docsnap)
+			time.Sleep(time.Millisecond * 250)
+		} else {
+			// Get attribute floors
+			var c database.Collection
+			err = docsnap.DataTo(&c)
+			if err != nil {
+				h.Logger.Error(err)
+			}
+
+			collectionAttributesMap[c.Slug] = c.Attributes
+			collectionFloorMap[c.Slug] = c.Floor
+		}
+	}
+
 	wallet := database.Wallet{
-		Collections: collections,
+		Collections: adaptWalletCollections(walletCollections, collectionAttributesMap, collectionFloorMap),
 		UpdatedAt:   time.Now(),
 	}
 
@@ -193,29 +240,90 @@ func (h *Handler) updateSingleAddress(a string) bool {
 		"updated", wr.UpdateTime,
 	)
 
-	// Make sure the collections exist in our database
-	var (
-		collectionSlugDocs    = make([]*firestore.DocumentRef, 0)
-		slugToOSCollectionMap = make(map[string]database.WalletCollection)
-	)
-
-	for _, collection := range wallet.Collections {
-		collectionSlugDocs = append(collectionSlugDocs, h.Database.Collection("collections").Doc(collection.Slug))
-		slugToOSCollectionMap[collection.Slug] = collection
-	}
-
-	docsnaps, err := h.Database.GetAll(h.Context, collectionSlugDocs)
-	if err != nil {
-		h.Logger.Error(err)
-		return false
-	}
-
-	for _, docsnap := range docsnaps {
-		if !docsnap.Exists() {
-			database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
-			time.Sleep(time.Millisecond * 250)
-		}
-	}
-
 	return true
+}
+
+func adaptNFTs(nfts []database.WalletAsset) []database.WalletAsset {
+	var adapted = make([]database.WalletAsset, 0)
+	for _, nft := range nfts {
+		adapted = append(nfts, database.WalletAsset{
+			Name:     nft.Name,
+			ImageURL: nft.ImageURL,
+			TokenID:  nft.TokenID,
+			Floor:    nft.Floor,
+		})
+	}
+	return adapted
+}
+
+func adaptTraits(traits []opensea.AssetTrait) []database.Attribute {
+	var attributes []database.Attribute
+	// TODO: Use generics
+	for _, trait := range traits {
+		// Convert trait.Value to string
+		var value string
+		switch trait.Value.(type) {
+		case string:
+			value = trait.Value.(string)
+		case int:
+			value = strconv.Itoa(trait.Value.(int))
+		case float64:
+			value = strconv.FormatFloat(trait.Value.(float64), 'f', -1, 64)
+		}
+
+		attributes = append(attributes, database.Attribute{
+			Key:   trait.TraitType,
+			Value: value,
+		})
+	}
+	return attributes
+}
+
+func adaptWalletCollections(
+	collections []database.WalletCollection,
+	collectionAttributesMap map[string][]database.Attribute,
+	collectionFloorMap map[string]float64,
+) []database.WalletCollection {
+	var adapted = make([]database.WalletCollection, 0)
+	// Determine NFT floor based on collection attribute floors
+	for _, collection := range collections {
+		var attributes = collectionAttributesMap[collection.Slug]
+		var nfts = make([]database.WalletAsset, 0)
+		for _, nft := range collection.NFTs {
+			var floor = collectionFloorMap[collection.Slug]
+			// Loop through the nft attributes and find a matching attribute in our collection attributes
+			var matchedAttrsMap = make(map[string]float64)
+			for _, attr := range nft.Attributes {
+				for _, collectionAttr := range attributes {
+					if attr.Key == collectionAttr.Key && attr.Value == collectionAttr.Value {
+						var key = fmt.Sprintf("%s-%s", attr.Key, attr.Value)
+						matchedAttrsMap[key] = collectionAttr.Floor
+					}
+				}
+			}
+
+			// Find the attribute with the highest floor that matches the collection attribute
+			for _, f := range matchedAttrsMap {
+				if f > floor {
+					floor = f
+				}
+			}
+
+			nft.Floor = floor
+			nfts = append(nfts, database.WalletAsset{
+				Name:     nft.Name,
+				ImageURL: nft.ImageURL,
+				TokenID:  nft.TokenID,
+				Floor:    nft.Floor,
+			})
+		}
+		adapted = append(adapted, database.WalletCollection{
+			Slug:     collection.Slug,
+			Name:     collection.Name,
+			NFTs:     nfts,
+			ImageURL: collection.ImageURL,
+		})
+	}
+
+	return adapted
 }

@@ -78,9 +78,11 @@ type WalletCollection struct {
 }
 
 type WalletAsset struct {
-	Name     string `firestore:"name" json:"name"`
-	TokenID  string `firestore:"tokenId" json:"tokenId"`
-	ImageURL string `firestore:"imageUrl" json:"imageUrl"`
+	Name       string      `firestore:"name" json:"name"`
+	TokenID    string      `firestore:"tokenId" json:"tokenId"`
+	ImageURL   string      `firestore:"imageUrl" json:"imageUrl"`
+	Attributes []Attribute `firestore:"attributes" json:"attributes"`
+	Floor      float64     `firestore:"floor" json:"floor"`
 }
 
 type Trait struct {
@@ -180,6 +182,7 @@ func UpdateCollectionStats(
 	}
 
 	// Fetch attribute floors from Reservoir
+	// TODO: Fetch more Attribute floors
 	if contract != "" && floor >= 0.05 {
 		attritubes = reservoirClient.GetAllAttributesForContract(contract)
 	}
@@ -257,6 +260,7 @@ func AddCollectionToDB(
 		logger.Infow("Fetched floor from NFT Floor Price", "slug", slug, "floor", floor)
 		c.Floor = floor
 	}
+	// Add collection to db
 	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
 	if err != nil {
 		logger.Error(err)
@@ -360,19 +364,19 @@ func adaptAttributes(attrs []reservoir.Attribute) []Attribute {
 	)
 
 	for _, attr := range attrs {
-		if len(attr.FloorAskPrices) > 0 {
+		if len(attr.FloorAskPrices) > 0 && attr.FloorAskPrices[0] > 0 {
 			// Convert to float64
 			floor = attr.FloorAskPrices[0]
+			if len(attr.SampleImages) > 0 {
+				image = attr.SampleImages[0]
+			}
+			resp = append(resp, Attribute{
+				Key:   attr.Key,
+				Value: attr.Value,
+				Floor: floor,
+				Image: image,
+			})
 		}
-		if len(attr.SampleImages) > 0 {
-			image = attr.SampleImages[0]
-		}
-		resp = append(resp, Attribute{
-			Key:   attr.Key,
-			Value: attr.Value,
-			Floor: floor,
-			Image: image,
-		})
 	}
 	return resp
 
