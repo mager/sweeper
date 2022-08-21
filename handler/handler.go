@@ -77,7 +77,10 @@ func (h *Handler) registerRoutes() {
 	h.Router.HandleFunc("/update/contract/{slug}", h.updateContract).
 		Methods("POST")
 
+		// One-off functions
 	h.Router.HandleFunc("/rename/users", h.renameUsers).
+		Methods("POST")
+	h.Router.HandleFunc("/delete/collections", h.deleteCollections).
 		Methods("POST")
 }
 

@@ -225,7 +225,7 @@ func UpdateCollectionStats(
 		logger.Infow("Floor below 0.005", "collection", docID, "floor", floor)
 	}
 
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 250)
 
 	return updated
 }
@@ -261,10 +261,16 @@ func AddCollectionToDB(
 		logger.Infow("Fetched floor from NFT Floor Price", "slug", slug, "floor", floor)
 		c.Floor = floor
 	}
+
 	// Add collection to db
-	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
-	if err != nil {
-		logger.Error(err)
+	if floor > 0.0 {
+		_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
+		if err != nil {
+			logger.Error(err)
+			return floor, false
+		}
+	} else {
+		logger.Infow("Floor was 0", "slug", slug)
 		return floor, false
 	}
 
