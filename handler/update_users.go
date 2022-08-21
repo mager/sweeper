@@ -322,6 +322,7 @@ func adaptWalletCollections(
 			Name:     collection.Name,
 			NFTs:     nfts,
 			ImageURL: collection.ImageURL,
+			Floor:    collectionFloorMap[collection.Slug],
 		})
 	}
 

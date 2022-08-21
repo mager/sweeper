@@ -75,6 +75,7 @@ type WalletCollection struct {
 	Slug     string        `firestore:"slug" json:"slug"`
 	ImageURL string        `firestore:"imageUrl" json:"imageUrl"`
 	NFTs     []WalletAsset `firestore:"nfts" json:"nfts"`
+	Floor    float64       `firestore:"floor" json:"floor"`
 }
 
 type WalletAsset struct {
