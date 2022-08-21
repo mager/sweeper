@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"github.com/kr/pretty"
 	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/database"
 	"google.golang.org/api/iterator"
@@ -197,6 +196,7 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	}
 
 	var collectionAttributesMap = make(map[string][]database.Attribute)
+	var collectionFloorMap = make(map[string]float64)
 	for _, docsnap := range docsnaps {
 		if !docsnap.Exists() {
 			h.Logger.Infof("Collection %s does not exist, adding", docsnap.Ref.ID)
@@ -215,11 +215,12 @@ func (h *Handler) updateSingleAddress(a string) bool {
 			}
 
 			collectionAttributesMap[c.Slug] = c.Attributes
+			collectionFloorMap[c.Slug] = c.Floor
 		}
 	}
 
 	wallet := database.Wallet{
-		Collections: adaptWalletCollections(walletCollections, collectionAttributesMap),
+		Collections: adaptWalletCollections(walletCollections, collectionAttributesMap, collectionFloorMap),
 		UpdatedAt:   time.Now(),
 	}
 
@@ -243,7 +244,7 @@ func (h *Handler) updateSingleAddress(a string) bool {
 }
 
 func adaptNFTs(nfts []database.WalletAsset) []database.WalletAsset {
-	var adapted = make([]database.WalletAsset, len(nfts))
+	var adapted = make([]database.WalletAsset, 0)
 	for _, nft := range nfts {
 		adapted = append(nfts, database.WalletAsset{
 			Name:     nft.Name,
@@ -278,43 +279,51 @@ func adaptTraits(traits []opensea.AssetTrait) []database.Attribute {
 	return attributes
 }
 
-func adaptWalletCollections(collections []database.WalletCollection, collectionAttributesMap map[string][]database.Attribute) []database.WalletCollection {
-	var adapted = make([]database.WalletCollection, len(collections))
-
+func adaptWalletCollections(
+	collections []database.WalletCollection,
+	collectionAttributesMap map[string][]database.Attribute,
+	collectionFloorMap map[string]float64,
+) []database.WalletCollection {
+	var adapted = make([]database.WalletCollection, 0)
 	// Determine NFT floor based on collection attribute floors
 	for _, collection := range collections {
 		var attributes = collectionAttributesMap[collection.Slug]
-		for _, attribute := range attributes {
-			for _, nft := range collection.NFTs {
-				var nftFloor float64
-				var matchedAttrsMap = make(map[string]float64)
-
-				for _, nftAttr := range nft.Attributes {
-					if nftAttr.Key == attribute.Key {
-						var key = fmt.Sprintf("%s-%s", nftAttr.Key, nftAttr.Value)
-						matchedAttrsMap[key] = attribute.Floor
+		var nfts = make([]database.WalletAsset, 0)
+		for _, nft := range collection.NFTs {
+			var floor = collectionFloorMap[collection.Slug]
+			// Loop through the nft attributes and find a matching attribute in our collection attributes
+			var matchedAttrsMap = make(map[string]float64)
+			for _, attr := range nft.Attributes {
+				for _, collectionAttr := range attributes {
+					if attr.Key == collectionAttr.Key && attr.Value == collectionAttr.Value {
+						var key = fmt.Sprintf("%s-%s", attr.Key, attr.Value)
+						matchedAttrsMap[key] = collectionAttr.Floor
 					}
 				}
-
-				// Find the attribute with the highest floor that matches the collection attribute
-				for key, floor := range matchedAttrsMap {
-					pretty.Print("FFF", key, floor, "\n")
-					if floor > nftFloor {
-						nftFloor = floor
-					}
-				}
-				nft.Floor = nftFloor
 			}
-		}
-	}
 
-	for _, collection := range collections {
+			// Find the attribute with the highest floor that matches the collection attribute
+			for _, f := range matchedAttrsMap {
+				if f > floor {
+					floor = f
+				}
+			}
+
+			nft.Floor = floor
+			nfts = append(nfts, database.WalletAsset{
+				Name:     nft.Name,
+				ImageURL: nft.ImageURL,
+				TokenID:  nft.TokenID,
+				Floor:    nft.Floor,
+			})
+		}
 		adapted = append(adapted, database.WalletCollection{
-			Name:     collection.Name,
 			Slug:     collection.Slug,
+			Name:     collection.Name,
+			NFTs:     nfts,
 			ImageURL: collection.ImageURL,
-			NFTs:     adaptNFTs(collection.NFTs),
 		})
 	}
+
 	return adapted
 }

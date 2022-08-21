@@ -58,7 +58,7 @@ func (r *ReservoirClient) GetAttributesForContract(contract string, offset int) 
 
 	q := u.Query()
 	q.Set("maxFloorAskPrices", "1")
-	q.Set("limit", "72")
+	q.Set("limit", "100")
 	q.Set("offset", fmt.Sprintf("%d", offset))
 
 	u.RawQuery = q.Encode()
@@ -98,19 +98,19 @@ func (r *ReservoirClient) GetAttributesForContract(contract string, offset int) 
 
 func (r *ReservoirClient) GetAllAttributesForContract(contract string) []Attribute {
 	var (
-	// resp []Attribute
-	// newAttributes []Attribute
-	// offset        int = 0
+		resp          []Attribute
+		newAttributes []Attribute
+		offset        int = 0
 	)
 
-	// newAttributes = r.GetAttributesForContract(contract, 0)
+	newAttributes = r.GetAttributesForContract(contract, 0)
 
 	// TODO: Add back when we want to index all attributes
-	// for len(newAttributes) > 0 {
-	// 	resp = append(resp, newAttributes...)
-	// 	offset += len(newAttributes)
-	// 	newAttributes = r.GetAttributesForContract(contract, offset)
-	// }
+	for len(newAttributes) > 0 {
+		resp = append(resp, newAttributes...)
+		offset += len(newAttributes)
+		newAttributes = r.GetAttributesForContract(contract, offset)
+	}
 
-	return r.GetAttributesForContract(contract, 0)
+	return resp
 }
