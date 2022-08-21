@@ -20,6 +20,7 @@ var (
 		"deadlink123",
 		"heir-game",
 		"spritelites",
+		"sky-club-by-jump",
 	}
 )
 
@@ -183,8 +184,7 @@ func UpdateCollectionStats(
 	}
 
 	// Fetch attribute floors from Reservoir
-	// TODO: Fetch more Attribute floors
-	if contract != "" && floor >= 0.05 {
+	if contract != "" && floor >= 0.01 {
 		attritubes = reservoirClient.GetAllAttributesForContract(contract)
 	}
 
@@ -203,7 +203,7 @@ func UpdateCollectionStats(
 			{Path: "supply", Value: utils.RoundFloat(totalSupply, 3)},
 			{Path: "thumb", Value: collection.ImageURL},
 			{Path: "updated", Value: now},
-			{Path: "topNfts", Value: topNFTs},
+			{Path: "topNFTs", Value: topNFTs},
 			{Path: "contract", Value: contract},
 			{Path: "attributes", Value: adaptAttributes(attritubes)},
 		})

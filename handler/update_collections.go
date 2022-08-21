@@ -23,6 +23,7 @@ var (
 
 type UpdateCollectionsReq struct {
 	CollectionType CollectionType `json:"collection_type"`
+	ForceUpdate    bool           `json:"force_update"`
 	StartAt        string         `json:"start_at"`
 	Slug           string         `json:"slug"`
 	Slugs          []string       `json:"slugs"`
@@ -85,6 +86,10 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) UpdateCollecti
 		h.Logger.Infow("Updating all collections starting with collection", "startAt", r.StartAt)
 		iter = collections.OrderBy(firestore.DocumentID, firestore.Asc).StartAt(r.StartAt).Documents(h.Context)
 		// Otherwise only update collections that haven't been updated in over 24 hours
+	} else if r.ForceUpdate {
+		h.Logger.Info("Force updating all collections")
+		iter = collections.Documents(h.Context)
+		// By default, update all collections that haven't been updated in over 24 hours
 	} else {
 		h.Logger.Info("Updating all collections that haven't been updated in 24 hours")
 		updatedSince := time.Now().Add(-24 * time.Hour)

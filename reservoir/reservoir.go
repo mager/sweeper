@@ -47,6 +47,11 @@ type AttributesExploreResp struct {
 
 var Options = ProvideReservoir
 
+const (
+	limit         = 500
+	maxAttributes = 500
+)
+
 func (r *ReservoirClient) GetAttributesForContract(contract string, offset int) []Attribute {
 	var attributes []Attribute
 
@@ -58,11 +63,11 @@ func (r *ReservoirClient) GetAttributesForContract(contract string, offset int) 
 
 	q := u.Query()
 	q.Set("maxFloorAskPrices", "1")
-	q.Set("limit", "100")
+	q.Set("limit", fmt.Sprint(limit))
 	q.Set("offset", fmt.Sprintf("%d", offset))
 
 	u.RawQuery = q.Encode()
-	r.logger.Infow("Reservoir Explore Attributes API Call", "url", u.String(), "offset", offset)
+	r.logger.Infow("Reservoir Explore Attributes API Call", "url", u.String(), "offset", offset, "contract", contract)
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
@@ -97,20 +102,6 @@ func (r *ReservoirClient) GetAttributesForContract(contract string, offset int) 
 }
 
 func (r *ReservoirClient) GetAllAttributesForContract(contract string) []Attribute {
-	var (
-		resp          []Attribute
-		newAttributes []Attribute
-		offset        int = 0
-	)
-
-	newAttributes = r.GetAttributesForContract(contract, 0)
-
-	// TODO: Add back when we want to index all attributes
-	for len(newAttributes) > 0 {
-		resp = append(resp, newAttributes...)
-		offset += len(newAttributes)
-		newAttributes = r.GetAttributesForContract(contract, offset)
-	}
-
-	return resp
+	// For now just fetch 500 attributes for a collection
+	return r.GetAttributesForContract(contract, 0)
 }
