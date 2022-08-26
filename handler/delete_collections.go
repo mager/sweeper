@@ -26,7 +26,7 @@ func (h *Handler) deleteCollections(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// doUpdateUsers updates a collection of addresses
+// doDeleteCollections deletes collections
 func (h *Handler) doDeleteCollections() bool {
 	var (
 		ctx         = context.Background()

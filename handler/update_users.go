@@ -28,6 +28,7 @@ var (
 
 type UpdateUsersReq struct {
 	UserType UserType `json:"user_type"`
+	StartAt  string   `json:"start_at"`
 	DryRun   bool     `json:"dry_run"`
 }
 
@@ -46,19 +47,23 @@ func (h *Handler) updateUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp.Success = h.doUpdateAddresses()
+	resp.Success = h.doUpdateAddresses(req)
 
 	json.NewEncoder(w).Encode(resp)
 }
 
 // doUpdateAddresses updates a collection of addresses
-func (h *Handler) doUpdateAddresses() bool {
+func (h *Handler) doUpdateAddresses(r UpdateUsersReq) bool {
 	var (
 		users = h.Database.Collection("users")
-		iter  = users.Documents(h.Context)
 		u     database.User
 		count = 0
+		iter  = users.Documents(h.Context)
 	)
+
+	if r.StartAt != "" {
+		iter = users.OrderBy(firestore.DocumentID, firestore.Asc).StartAt(r.StartAt).Documents(h.Context)
+	}
 
 	// Fetch users from Firestore
 	for {
@@ -109,15 +114,17 @@ func (h *Handler) updateSingleAddress(a string) bool {
 
 	doc, err = users.Doc(address).Get(h.Context)
 	if err != nil {
-		h.Logger.Errorf("Error getting user: %v, ading them to the database", err)
+		h.Logger.Errorf("Error getting user: %v, adding them to the database", err)
 
 		// Add user to the database
 		_, err = users.Doc(address).Set(h.Context, map[string]interface{}{
-			"address": address,
+			"address":  address,
+			"updating": true,
 		})
 		if err != nil {
 			h.Logger.Error(err)
 		}
+
 		doc, err = users.Doc(address).Get(h.Context)
 		if err != nil {
 			h.Logger.Errorf("Error getting user again: %v, returning", err)
@@ -201,11 +208,13 @@ func (h *Handler) updateSingleAddress(a string) bool {
 		if !docsnap.Exists() {
 			h.Logger.Infof("Collection %s does not exist, adding", docsnap.Ref.ID)
 
-			database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
+			_, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
 			time.Sleep(time.Millisecond * 250)
 
-			database.UpdateCollectionStats(h.Context, h.Logger, h.OpenSea, h.BigQuery, h.NFTStats, h.Reservoir, docsnap)
-			time.Sleep(time.Millisecond * 250)
+			if updated {
+				database.UpdateCollectionStats(h.Context, h.Logger, h.OpenSea, h.BigQuery, h.NFTStats, h.Reservoir, docsnap)
+				time.Sleep(time.Millisecond * 250)
+			}
 		} else {
 			// Get attribute floors
 			var c database.Collection
@@ -227,6 +236,7 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	// Update collections
 	wr, err := doc.Ref.Update(h.Context, []firestore.Update{
 		{Path: "wallet", Value: wallet},
+		{Path: "updating", Value: false},
 	})
 
 	if err != nil {
