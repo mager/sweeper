@@ -123,6 +123,11 @@ type TopNFT struct {
 	OSLink string `firestore:"osLink" json:"osLink"`
 }
 
+const (
+	// MaxFloorPrice is the maximum floor price
+	MaxFloorPrice = 100.0
+)
+
 // ProvideDB provides a firestore client
 func ProvideDB() *firestore.Client {
 	projectID := "floorreport"
@@ -263,7 +268,7 @@ func AddCollectionToDB(
 	}
 
 	// Add collection to db
-	if floor > 0.0 {
+	if floor > 0.0 && floor <= MaxFloorPrice {
 		_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
 		if err != nil {
 			logger.Error(err)

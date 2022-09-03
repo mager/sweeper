@@ -12,14 +12,19 @@ import (
 )
 
 type Stats struct {
-	TotalCollections int       `json:"totalCollections"`
-	TotalUsers       int       `json:"totalUsers"`
-	Updated          time.Time `json:"updated"`
+	TotalCollections   int       `json:"totalCollections"`
+	TotalUsers         int       `json:"totalUsers"`
+	MaxFloorWithBuffer int       `json:"maxFloorWithBuffer"`
+	Updated            time.Time `json:"updated"`
 }
 
 type UpdateStatsReq struct {
 	Success bool `json:"success"`
 }
+
+const (
+	MaxFloorBuffer = 20
+)
 
 func (h *Handler) updateStats(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -43,6 +48,7 @@ func (h *Handler) doUpdateStats() bool {
 		u                database.User
 		collectionsCount = 0
 		usersCount       = 0
+		highestFloor     = 0.0
 	)
 
 	// Fetch collections from Firestore
@@ -60,6 +66,11 @@ func (h *Handler) doUpdateStats() bool {
 			h.Logger.Error(err)
 		}
 		collectionsCount++
+
+		// Find the highest floor price
+		if c.Floor > highestFloor {
+			highestFloor = c.Floor
+		}
 	}
 
 	// Fetch users from Firestore
@@ -82,9 +93,10 @@ func (h *Handler) doUpdateStats() bool {
 	h.Logger.Infof("Found %d collections & %d users", collectionsCount, usersCount)
 
 	h.Database.Collection("features").Doc("stats").Set(ctx, map[string]interface{}{
-		"totalCollections": collectionsCount,
-		"totalUsers":       usersCount,
-		"updated":          time.Now(),
+		"totalCollections":   collectionsCount,
+		"totalUsers":         usersCount,
+		"maxFloorWithBuffer": highestFloor + MaxFloorBuffer,
+		"updated":            time.Now(),
 	}, firestore.MergeAll)
 
 	return true

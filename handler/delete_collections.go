@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"github.com/kr/pretty"
 	"github.com/mager/sweeper/database"
 	"google.golang.org/api/iterator"
 )
@@ -29,10 +28,10 @@ func (h *Handler) deleteCollections(w http.ResponseWriter, r *http.Request) {
 // doDeleteCollections deletes collections
 func (h *Handler) doDeleteCollections() bool {
 	var (
-		ctx         = context.Background()
+		ctx = context.Background()
+		// collections = h.Database.Collection("collections").Where("floor", ">", 100)
 		collections = h.Database.Collection("collections").Where("floor", "==", 0)
 		iter        = collections.Documents(h.Context)
-		c           = make([]database.Collection, 0)
 		count       = 0
 	)
 
@@ -62,8 +61,6 @@ func (h *Handler) doDeleteCollections() bool {
 			count++
 		}
 	}
-
-	pretty.Print(len(c))
 
 	// Log the number of collections updated
 	h.Logger.Info("Deleted", count, "collections")
