@@ -11,6 +11,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/database"
+	os "github.com/mager/sweeper/opensea"
 	"google.golang.org/api/iterator"
 )
 
@@ -209,11 +210,11 @@ func (h *Handler) updateSingleAddress(a string) bool {
 			h.Logger.Infof("Collection %s does not exist, adding", docsnap.Ref.ID)
 
 			_, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
-			time.Sleep(time.Millisecond * 250)
+			time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
 
 			if updated {
 				database.UpdateCollectionStats(h.Context, h.Logger, h.OpenSea, h.BigQuery, h.NFTStats, h.Reservoir, docsnap)
-				time.Sleep(time.Millisecond * 250)
+				time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
 			}
 		} else {
 			// Get attribute floors

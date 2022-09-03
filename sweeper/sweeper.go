@@ -11,6 +11,7 @@ import (
 
 	"github.com/mager/sweeper/config"
 	"github.com/mager/sweeper/database"
+	os "github.com/mager/sweeper/opensea"
 	"go.uber.org/zap"
 )
 
@@ -111,7 +112,7 @@ func (s *SweeperClient) AddCollections(slugs []string) bool {
 		return false
 	}
 
-	time.Sleep(time.Millisecond * 250)
+	time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
 
 	return true
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/mager/go-opensea/opensea"
 	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
+	os "github.com/mager/sweeper/opensea"
 	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/utils"
 	"go.uber.org/zap"
@@ -230,7 +231,7 @@ func UpdateCollectionStats(
 		logger.Infow("Floor below 0.005", "collection", docID, "floor", floor)
 	}
 
-	time.Sleep(time.Millisecond * 250)
+	time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
 
 	return updated
 }

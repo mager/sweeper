@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	os "github.com/mager/sweeper/opensea"
 	"google.golang.org/api/iterator"
 )
 
@@ -113,7 +114,7 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) UpdateCollecti
 
 		// Sleep because OpenSea throttles requests
 		// Rate limit is 4 requests per second
-		time.Sleep(time.Millisecond * 250)
+		time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
 
 		if updatedResp.Success {
 			count++

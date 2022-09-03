@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	OpenSeaRateLimit     = 250 * time.Millisecond
+const (
+	OpenSeaRateLimit     = 200 * time.Millisecond
 	OpenSeaNotFoundError = "collection_not_found"
 )
 
