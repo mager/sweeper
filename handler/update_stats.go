@@ -31,7 +31,7 @@ func (h *Handler) updateStats(w http.ResponseWriter, r *http.Request) {
 		resp = UpdateUsersResp{}
 	)
 
-	resp.Success = h.doUpdateStats()
+	resp.Queued = h.doUpdateStats()
 
 	json.NewEncoder(w).Encode(resp)
 }

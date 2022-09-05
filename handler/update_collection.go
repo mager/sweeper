@@ -9,8 +9,7 @@ import (
 )
 
 type UpdateCollectionResp struct {
-	Success    bool                `json:"success"`
-	Collection database.Collection `json:"collection"`
+	Queued bool `json:"queued"`
 }
 
 func (h *Handler) updateCollection(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +20,9 @@ func (h *Handler) updateCollection(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	slug := vars["slug"]
 
-	resp.Collection, resp.Success = h.updateSingleCollection(slug)
+	go h.updateSingleCollection(slug)
+
+	resp.Queued = true
 
 	json.NewEncoder(w).Encode(resp)
 }
