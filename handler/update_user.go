@@ -11,7 +11,7 @@ type UpdateUserReq struct {
 }
 
 type UpdateUserResp struct {
-	Queued bool `json:"queued"`
+	Success bool `json:"success"`
 }
 
 func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
@@ -26,9 +26,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Logger.Infow("Updating user address", "address", req.Address)
-	go h.doUpdateAddress(req.DryRun, req.Address)
-
-	resp.Queued = true
+	resp.Success = h.doUpdateAddress(req.DryRun, req.Address)
 
 	json.NewEncoder(w).Encode(resp)
 }
