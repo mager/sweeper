@@ -268,6 +268,8 @@ func AddCollectionToDB(
 		c.Floor = floor
 	}
 
+	logger.Infow("Updating collection", "collection", slug, "floor", floor)
+
 	// Add collection to db
 	if floor > 0.0 && floor <= MaxFloorPrice {
 		_, err = database.Collection("collections").Doc(slug).Set(ctx, c)

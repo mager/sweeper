@@ -212,7 +212,6 @@ func (h *Handler) updateSingleAddress(a string) bool {
 			h.Logger.Infof("Collection %s does not exist, adding", docsnap.Ref.ID)
 
 			_, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, docsnap.Ref.ID)
-			time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
 
 			if updated {
 				database.UpdateCollectionStats(h.Context, h.Logger, h.OpenSea, h.BigQuery, h.NFTStats, h.Reservoir, docsnap)
