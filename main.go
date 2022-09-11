@@ -22,6 +22,7 @@ import (
 	storageClient "github.com/mager/sweeper/storage"
 	sweeperClient "github.com/mager/sweeper/sweeper"
 	"go.uber.org/fx"
+
 	"go.uber.org/zap"
 )
 

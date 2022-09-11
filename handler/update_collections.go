@@ -31,8 +31,7 @@ type UpdateCollectionsReq struct {
 }
 
 type UpdateCollectionsResp struct {
-	Success bool `json:"success"`
-	Count   int  `json:"count"`
+	Queued bool `json:"queued"`
 }
 
 func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
@@ -53,11 +52,11 @@ func (h *Handler) updateCollections(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Missing collection type or slug", http.StatusBadRequest)
 			return
 		}
-		updateResp := h.Sweeper.UpdateCollection(req.Slug)
-		resp.Success = updateResp.Success
+		go h.Sweeper.UpdateCollection(req.Slug)
 	} else {
-		resp = h.updateCollectionsByType(req)
+		go h.updateCollectionsByType(req)
 	}
+	resp.Queued = true
 
 	json.NewEncoder(w).Encode(resp)
 }
@@ -123,8 +122,7 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) UpdateCollecti
 
 	h.Logger.Infof("Updated %d collections", count)
 
-	resp.Success = true
-	resp.Count = count
+	resp.Queued = true
 
 	return resp
 }
