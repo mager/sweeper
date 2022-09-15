@@ -112,8 +112,7 @@ func (h *Handler) updateCollectionsByType(r UpdateCollectionsReq) UpdateCollecti
 		updatedResp := h.Sweeper.UpdateCollection(doc.Ref.ID)
 
 		// Sleep because OpenSea throttles requests
-		// Rate limit is 4 requests per second
-		time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
+		time.Sleep(os.OpenSeaRateLimit)
 
 		if updatedResp.Success {
 			count++

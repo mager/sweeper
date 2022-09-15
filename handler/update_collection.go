@@ -4,23 +4,28 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/mager/sweeper/database"
 )
 
+type UpdateCollectionReq struct {
+	Slug string `json:"slug"`
+}
 type UpdateCollectionResp struct {
 	Queued bool `json:"queued"`
 }
 
 func (h *Handler) updateCollection(w http.ResponseWriter, r *http.Request) {
 	var (
+		req  = UpdateCollectionReq{}
 		resp = UpdateCollectionResp{}
 	)
 
-	vars := mux.Vars(r)
-	slug := vars["slug"]
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	go h.updateSingleCollection(slug)
+	go h.updateSingleCollection(req.Slug)
 
 	resp.Queued = true
 

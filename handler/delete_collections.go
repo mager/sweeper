@@ -53,7 +53,7 @@ func (h *Handler) doDeleteCollections() bool {
 			break
 		}
 
-		updated, err := h.deleteCollection(ctx, doc)
+		updated, err := h.deleteSingleCollection(ctx, doc)
 		if err != nil {
 			h.Logger.Error(err)
 		}
@@ -68,7 +68,7 @@ func (h *Handler) doDeleteCollections() bool {
 	return true
 }
 
-func (h *Handler) deleteCollection(ctx context.Context, doc *firestore.DocumentSnapshot) (bool, error) {
+func (h *Handler) deleteSingleCollection(ctx context.Context, doc *firestore.DocumentSnapshot) (bool, error) {
 	var (
 		user = database.User{}
 	)

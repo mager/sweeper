@@ -112,7 +112,7 @@ func (s *SweeperClient) AddCollections(slugs []string) bool {
 		return false
 	}
 
-	time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
+	time.Sleep(os.OpenSeaRateLimit)
 
 	return true
 }

@@ -35,5 +35,12 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 
 // doUpdateAddresses updates a single address
 func (h *Handler) doUpdateAddress(dryRun bool, address string) bool {
-	return h.updateSingleAddress(address)
+	updated := h.updateSingleAddress(address)
+	if updated {
+		h.Logger.Infow("Updated user address", "address", address)
+	} else {
+		h.Logger.Infow("Failed to update user address", "address", address)
+	}
+
+	return updated
 }
