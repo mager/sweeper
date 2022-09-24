@@ -111,28 +111,23 @@ func (h *Handler) updateSingleAddress(a string) bool {
 		doc         *firestore.DocumentSnapshot
 		err         error
 		address     = strings.ToLower(a)
-		users       = h.Database.Collection("users")
 		collections = h.Database.Collection("collections")
 	)
 
-	doc, err = users.Doc(address).Get(h.Context)
+	// Fetch the user from Firestore
+	doc, err = h.getUser(address)
 	if err != nil {
-		h.Logger.Errorf("Error getting user: %v, adding them to the database", err)
+		h.Logger.Error(err)
+		return false
+	}
 
-		// Add user to the database
-		_, err = users.Doc(address).Set(h.Context, map[string]interface{}{
-			"address":  address,
-			"updating": true,
-		})
-		if err != nil {
-			h.Logger.Error(err)
-		}
-
-		doc, err = users.Doc(address).Get(h.Context)
-		if err != nil {
-			h.Logger.Errorf("Error getting user again: %v, returning", err)
-			return false
-		}
+	// Set updating to true
+	_, err = doc.Ref.Set(h.Context, map[string]interface{}{
+		"updating": true,
+	}, firestore.MergeAll)
+	if err != nil {
+		h.Logger.Error(err)
+		return false
 	}
 
 	err = doc.DataTo(&u)
@@ -255,19 +250,6 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	return true
 }
 
-func adaptNFTs(nfts []database.WalletAsset) []database.WalletAsset {
-	var adapted = make([]database.WalletAsset, 0)
-	for _, nft := range nfts {
-		adapted = append(nfts, database.WalletAsset{
-			Name:     nft.Name,
-			ImageURL: nft.ImageURL,
-			TokenID:  nft.TokenID,
-			Floor:    nft.Floor,
-		})
-	}
-	return adapted
-}
-
 func adaptTraits(traits []opensea.AssetTrait) []database.Attribute {
 	var attributes []database.Attribute
 	// TODO: Use generics
@@ -339,4 +321,33 @@ func adaptWalletCollections(
 	}
 
 	return adapted
+}
+
+// getUser returns the user from Firestore
+func (h *Handler) getUser(address string) (*firestore.DocumentSnapshot, error) {
+	users := h.Database.Collection("users")
+
+	// Fetch the user from Firestore
+	doc, err := users.Doc(address).Get(h.Context)
+	if err != nil {
+		h.Logger.Errorf("Error getting user: %v, adding them to the database", err)
+
+		// Add user to the database
+		_, err = users.Doc(address).Set(h.Context, map[string]interface{}{
+			"address":  address,
+			"updating": true,
+		})
+		if err != nil {
+			h.Logger.Error(err)
+		}
+
+		// Refetching the user
+		doc, err = users.Doc(address).Get(h.Context)
+		if err != nil {
+			h.Logger.Errorf("Error getting user again: %v, returning", err)
+			return nil, err
+		}
+	}
+
+	return doc, nil
 }

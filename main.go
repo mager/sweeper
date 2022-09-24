@@ -64,9 +64,6 @@ func Register(
 	// TODO: Remove global context
 	var ctx = context.Background()
 
-	// TODO: Set concurrency back to default after moving this out
-	//	bot.New(ctx, dg, logger, database, openSeaClient)
-
 	p := handler.Handler{
 		BigQuery:      bq,
 		Context:       ctx,

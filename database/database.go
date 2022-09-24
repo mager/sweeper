@@ -68,8 +68,13 @@ type User struct {
 	DiscordID string `firestore:"discordID" json:"discordID"`
 
 	// Settings
-	IsFren      bool `firestore:"isFren" json:"isFren"`
-	ShouldIndex bool `firestore:"shouldIndex" json:"shouldIndex"`
+	IsFren      bool         `firestore:"isFren" json:"isFren"`
+	ShouldIndex bool         `firestore:"shouldIndex" json:"shouldIndex"`
+	Settings    UserSettings `firestore:"settings" json:"settings"`
+}
+
+type UserSettings struct {
+	HideZeroETHCollections bool `json:"hide0ETHCollections"`
 }
 
 type WalletCollection struct {
