@@ -141,6 +141,7 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	)
 
 	// Fetch the user's collections & NFTs from OpenSea
+	h.Logger.Infow("Fetching user's collections from OpenSea", "address", address)
 	openseaAssets = h.getOpenSeaAssets(address)
 	h.Logger.Infow("Fetched OpenSea assets", "address", address, "count", len(openseaAssets))
 	// Create a list of wallet collections

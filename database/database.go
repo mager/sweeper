@@ -131,7 +131,7 @@ type TopNFT struct {
 
 const (
 	// MaxFloorPrice is the maximum floor price
-	MaxFloorPrice = 100.0
+	MaxFloorPrice = 150.0
 )
 
 // ProvideDB provides a firestore client
@@ -236,7 +236,7 @@ func UpdateCollectionStats(
 		logger.Infow("Floor below 0.005", "collection", docID, "floor", floor)
 	}
 
-	time.Sleep(time.Millisecond * os.OpenSeaRateLimit)
+	time.Sleep(os.OpenSeaRateLimit)
 
 	return updated
 }

@@ -36,7 +36,6 @@ func (h *Handler) updateCollection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) updateSingleCollection(slug string) (database.Collection, bool) {
 	var (
 		err        error
-		floor      float64
 		collection database.Collection
 		updated    bool
 	)
@@ -67,7 +66,7 @@ func (h *Handler) updateSingleCollection(slug string) (database.Collection, bool
 	if docsnap.Exists() {
 		// Update collection
 		h.Logger.Info("Collection found, updating")
-		updated = database.UpdateCollectionStats(
+		go database.UpdateCollectionStats(
 			h.Context,
 			h.Logger,
 			h.OpenSea,
@@ -76,18 +75,9 @@ func (h *Handler) updateSingleCollection(slug string) (database.Collection, bool
 			h.Reservoir,
 			docsnap,
 		)
-		h.Logger.Infow(
-			"Collection updated",
-			"collection", docsnap.Ref.ID,
-			"floor", floor,
-			"updated", updated,
-		)
 	}
 
-	if updated {
-		// Fetch collection
-		collection = database.GetCollection(h.Context, h.Logger, h.Database, slug)
-	}
+	collection = database.GetCollection(h.Context, h.Logger, h.Database, slug)
 
 	return collection, updated
 }
