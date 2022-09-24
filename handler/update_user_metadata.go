@@ -7,14 +7,14 @@ import (
 	"github.com/mager/sweeper/storage"
 )
 
-type UpdateUserMetadataResp struct {
+type UpdateUserAvatarResp struct {
 	Success bool `json:"success"`
 }
 
-func (h *Handler) updateUserMetadata(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) updateUserAvatar(w http.ResponseWriter, r *http.Request) {
 	// Get address from path params
 	var (
-		resp UpdateUserMetadataResp
+		resp UpdateUserAvatarResp
 	)
 
 	resp.Success = storage.UploadUserMetadata(h.Context, h.Logger, h.Storage, r)

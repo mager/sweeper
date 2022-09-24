@@ -74,7 +74,7 @@ type User struct {
 }
 
 type UserSettings struct {
-	HideZeroETHCollections bool `json:"hide0ETHCollections"`
+	HideZeroETHCollections bool `firestore:"hide0ETHCollections" json:"hide0ETHCollections"`
 }
 
 type WalletCollection struct {
