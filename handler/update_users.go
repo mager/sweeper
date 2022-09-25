@@ -234,6 +234,7 @@ func (h *Handler) updateSingleAddress(a string) bool {
 	// Update collections
 	wr, err := doc.Ref.Update(h.Context, []firestore.Update{
 		{Path: "wallet", Value: wallet},
+		{Path: "updated", Value: time.Now()},
 		{Path: "updating", Value: false},
 	})
 
