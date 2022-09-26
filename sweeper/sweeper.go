@@ -121,7 +121,7 @@ func (s *SweeperClient) AddCollections(slugs []string) bool {
 func (s *SweeperClient) UpdateCollection(slug string) *UpdateResp {
 	updateResp := &UpdateResp{}
 
-	u, err := url.Parse(fmt.Sprintf("%s/update/collection/%s", s.basePath, slug))
+	u, err := url.Parse(fmt.Sprintf("%s/update/collection", s.basePath))
 	if err != nil {
 		s.logger.Error(err)
 		return updateResp
@@ -129,7 +129,9 @@ func (s *SweeperClient) UpdateCollection(slug string) *UpdateResp {
 	q := u.Query()
 	u.RawQuery = q.Encode()
 
-	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(nil))
+	var jsonStr = []byte(fmt.Sprintf("{\"slug\": \"%s\"}", slug))
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(jsonStr))
 	if err != nil {
 		s.logger.Error(err)
 		return updateResp
