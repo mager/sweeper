@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -285,32 +284,37 @@ func adaptWalletCollections(
 	for _, collection := range collections {
 		var attributes = collectionAttributesMap[collection.Slug]
 		var nfts = make([]database.WalletAsset, 0)
+
 		for _, nft := range collection.NFTs {
 			var floor = collectionFloorMap[collection.Slug]
+			var maxFloorAttr database.Attribute
+			var matchedAttrsMap = make(map[database.Attribute]float64)
+
 			// Loop through the nft attributes and find a matching attribute in our collection attributes
-			var matchedAttrsMap = make(map[string]float64)
 			for _, attr := range nft.Attributes {
 				for _, collectionAttr := range attributes {
 					if attr.Key == collectionAttr.Key && attr.Value == collectionAttr.Value {
-						var key = fmt.Sprintf("%s-%s", attr.Key, attr.Value)
-						matchedAttrsMap[key] = collectionAttr.Floor
+						// var key = fmt.Sprintf("%s-%s", attr.Key, attr.Value)
+						matchedAttrsMap[collectionAttr] = collectionAttr.Floor
 					}
 				}
 			}
 
 			// Find the attribute with the highest floor that matches the collection attribute
-			for _, f := range matchedAttrsMap {
+			for attr, f := range matchedAttrsMap {
 				if f > floor {
 					floor = f
+					maxFloorAttr = attr
 				}
 			}
 
 			nft.Floor = floor
 			nfts = append(nfts, database.WalletAsset{
-				Name:     nft.Name,
-				ImageURL: nft.ImageURL,
-				TokenID:  nft.TokenID,
-				Floor:    nft.Floor,
+				Name:         nft.Name,
+				ImageURL:     nft.ImageURL,
+				TokenID:      nft.TokenID,
+				Floor:        nft.Floor,
+				MaxFloorAttr: maxFloorAttr,
 			})
 		}
 		adapted = append(adapted, database.WalletCollection{

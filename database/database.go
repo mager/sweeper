@@ -86,11 +86,12 @@ type WalletCollection struct {
 }
 
 type WalletAsset struct {
-	Name       string      `firestore:"name" json:"name"`
-	TokenID    string      `firestore:"tokenId" json:"tokenId"`
-	ImageURL   string      `firestore:"imageUrl" json:"imageUrl"`
-	Attributes []Attribute `firestore:"attributes" json:"attributes"`
-	Floor      float64     `firestore:"floor" json:"floor"`
+	Name         string      `firestore:"name" json:"name"`
+	TokenID      string      `firestore:"tokenId" json:"tokenId"`
+	ImageURL     string      `firestore:"imageUrl" json:"imageUrl"`
+	Attributes   []Attribute `firestore:"attributes" json:"attributes"`
+	Floor        float64     `firestore:"floor" json:"floor"`
+	MaxFloorAttr Attribute   `firestore:"maxFloorAttr" json:"maxFloorAttr"`
 }
 
 type Trait struct {
