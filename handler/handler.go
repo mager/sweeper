@@ -86,6 +86,8 @@ func (h *Handler) registerRoutes() {
 		Methods("POST")
 	h.Router.HandleFunc("/delete/collections", h.deleteCollections).
 		Methods("POST")
+	h.Router.HandleFunc("/update/trending", h.updateTrending).
+		Methods("POST")
 }
 
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
