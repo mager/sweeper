@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
 	"github.com/mager/go-opensea/opensea"
+	"github.com/mager/go-reservoir/entity"
 	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
 	os "github.com/mager/sweeper/opensea"
@@ -196,9 +197,9 @@ func UpdateCollectionStats(
 	}
 
 	// Fetch attribute floors from Reservoir
-	if contract != "" && floor >= 0.01 {
-		attritubes = reservoirClient.GetAllAttributesForContract(contract)
-	}
+	// if contract != "" && floor >= 0.01 {
+	// 	attritubes = reservoirClient.GetAllAttributesForContract(contract)
+	// }
 
 	if collection.Slug != "" {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
@@ -377,7 +378,7 @@ func GetTopNFTs(ctx context.Context, logger *zap.SugaredLogger, nftstatsClient *
 	return resp
 }
 
-func adaptAttributes(attrs []reservoir.Attribute) []Attribute {
+func adaptAttributes(attrs []entity.Attribute) []Attribute {
 	var (
 		resp  []Attribute
 		floor float64

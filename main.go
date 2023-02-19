@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 	"github.com/mager/go-opensea/opensea"
+	"github.com/mager/go-reservoir/reservoir"
 	bq "github.com/mager/sweeper/bigquery"
 	"github.com/mager/sweeper/config"
 	"github.com/mager/sweeper/database"
@@ -17,7 +18,7 @@ import (
 	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
 	os "github.com/mager/sweeper/opensea"
-	"github.com/mager/sweeper/reservoir"
+	reservoirClient "github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/router"
 	storageClient "github.com/mager/sweeper/storage"
 	sweeperClient "github.com/mager/sweeper/sweeper"
@@ -37,7 +38,7 @@ func main() {
 			nftfloorprice.Options,
 			nftstats.Options,
 			os.Options,
-			reservoir.Options,
+			reservoirClient.Options,
 			router.Options,
 			storageClient.Options,
 			sweeperClient.Options,

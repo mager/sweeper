@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/mager/go-reservoir/reservoir"
 	"github.com/mager/sweeper/config"
 	"go.uber.org/zap"
 )
@@ -34,6 +35,10 @@ func ProvideReservoir(cfg config.Config, logger *zap.SugaredLogger) *ReservoirCl
 	}
 }
 
+func ProvideReservoirClient(cfg config.Config) *reservoir.ReservoirClient {
+	return reservoir.NewReservoirClient(cfg.ReservoirAPIKey)
+}
+
 type Attribute struct {
 	Key            string    `json:"key"`
 	Value          string    `json:"value"`
@@ -45,7 +50,7 @@ type AttributesExploreResp struct {
 	Attributes []Attribute `json:"attributes"`
 }
 
-var Options = ProvideReservoir
+var Options = ProvideReservoirClient
 
 const (
 	limit         = 500
