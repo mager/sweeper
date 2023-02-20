@@ -18,7 +18,7 @@ import (
 	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
 	os "github.com/mager/sweeper/opensea"
-	reservoirClient "github.com/mager/sweeper/reservoir"
+	res "github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/router"
 	storageClient "github.com/mager/sweeper/storage"
 	sweeperClient "github.com/mager/sweeper/sweeper"
@@ -38,7 +38,7 @@ func main() {
 			nftfloorprice.Options,
 			nftstats.Options,
 			os.Options,
-			reservoirClient.Options,
+			res.Options,
 			router.Options,
 			storageClient.Options,
 			sweeperClient.Options,

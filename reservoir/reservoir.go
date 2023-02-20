@@ -35,7 +35,8 @@ func ProvideReservoir(cfg config.Config, logger *zap.SugaredLogger) *ReservoirCl
 	}
 }
 
-func ProvideReservoirClient(cfg config.Config) *reservoir.ReservoirClient {
+// ProvideReservoirClient provides an Reservoir client
+func ProvideReservoirClient(cfg config.Config, logger *zap.SugaredLogger) *reservoir.ReservoirClient {
 	return reservoir.NewReservoirClient(cfg.ReservoirAPIKey)
 }
 

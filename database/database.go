@@ -7,12 +7,12 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/firestore"
+	"github.com/kr/pretty"
 	"github.com/mager/go-opensea/opensea"
-	"github.com/mager/go-reservoir/entity"
+	"github.com/mager/go-reservoir/reservoir"
 	"github.com/mager/sweeper/nftfloorprice"
 	"github.com/mager/sweeper/nftstats"
 	os "github.com/mager/sweeper/opensea"
-	"github.com/mager/sweeper/reservoir"
 	"github.com/mager/sweeper/utils"
 	"go.uber.org/zap"
 )
@@ -197,9 +197,9 @@ func UpdateCollectionStats(
 	}
 
 	// Fetch attribute floors from Reservoir
-	// if contract != "" && floor >= 0.01 {
-	// 	attritubes = reservoirClient.GetAllAttributesForContract(contract)
-	// }
+	if contract != "" && floor >= 0.01 {
+		// attritubes = reservoirClient.GetAllAttributesForContract(contract)
+	}
 
 	if collection.Slug != "" {
 		logger.Infow("Updating floor price", "floor", floor, "collection", docID)
@@ -239,6 +239,93 @@ func UpdateCollectionStats(
 	}
 
 	time.Sleep(os.OpenSeaRateLimit)
+
+	return updated
+}
+
+func UpdateCollectionStatsV2(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	openSeaClient *opensea.OpenSeaClient,
+	bigQueryClient *bigquery.Client,
+	nftstatsClient *nftstats.NFTStatsClient,
+	reservoirClient *reservoir.ReservoirClient,
+	doc *firestore.DocumentSnapshot,
+) bool {
+	slug := doc.Ref.ID
+	updated := false
+
+	// Fetch collection from Reservoir
+	opts := reservoir.GetCollectionsOptions{
+		Slug:              slug,
+		IncludeOwnerCount: true,
+	}
+	collections, err := reservoirClient.GetCollections(opts)
+	if err != nil {
+		logger.Errorw("Error fetching collection from Reservoir", "slug", slug, "error", err)
+	}
+
+	if len(collections.Collections) == 0 || len(collections.Collections) != 1 {
+		logger.Errorw("Unexpected collection count", "slug", slug, "count", len(collections.Collections))
+		return false
+	}
+
+	collection := collections.Collections[0]
+
+	// // Fetch collection from OpenSea
+	// collection, err := openSeaClient.GetCollection(slug)
+	// if err != nil {
+	// 	logger.Error(err)
+
+	// 	if err.Error() == "collection_not_found" {
+	// 		DeleteCollection(ctx, logger, doc)
+	// 	}
+	// }
+
+	// // Fetch collection from NFT Stats
+	// topNFTs, err := nftstatsClient.GetTopNFTs(docID)
+	// if err != nil {
+	// 	logger.Error(err)
+	// }
+
+	var (
+		floor        = collection.FloorAsk.Price.Amount.Decimal
+		contract     = collection.ID
+		sevenDayVol  = collection.Volume.SevenDay
+		oneDayVol    = collection.Volume.OneDay
+		thirtyDayVol = collection.Volume.Three0Day
+		totalSales   = collection.Volume.AllTime
+		numOwners    = collection.OwnerCount
+		totalSupply  = collection.TokenCount
+		// attritubes   []reservoir.Attribute
+	)
+
+	// // Fetch attribute floors from Reservoir
+	// if contract != "" && floor >= 0.01 {
+	// 	// attritubes = reservoirClient.GetAllAttributesForContract(contract)
+	// }
+
+	logger.Infow("Updating floor price", "floor", floor, "collection", slug)
+
+	// Update collection
+	doc.Ref.Update(ctx, []firestore.Update{
+		{Path: "1d", Value: utils.RoundFloat(oneDayVol, 3)},
+		{Path: "30d", Value: utils.RoundFloat(thirtyDayVol, 3)},
+		{Path: "7d", Value: utils.RoundFloat(sevenDayVol, 3)},
+		{Path: "floor", Value: floor},
+		{Path: "contract", Value: contract},
+		{Path: "updated", Value: time.Now()},
+		{Path: "num", Value: numOwners},
+		{Path: "sales", Value: utils.RoundFloat(totalSales, 3)},
+		{Path: "supply", Value: totalSupply},
+		{Path: "thumb", Value: collection.Image},
+		// 		{Path: "topNFTs", Value: topNFTs},
+		// 		{Path: "attributes", Value: adaptAttributes(attritubes)},
+	})
+
+	time.Sleep(os.OpenSeaRateLimit)
+
+	logger.Infow("Updated collection", "collection", slug, "floor", floor)
 
 	return updated
 }
@@ -289,6 +376,77 @@ func AddCollectionToDB(
 		return floor, false
 	}
 
+	return floor, true
+}
+
+func AddCollectionToDBV2(
+	ctx context.Context,
+	reservoirClient *reservoir.ReservoirClient,
+	nftFloorPriceClient *nftfloorprice.NFTFloorPriceClient,
+	logger *zap.SugaredLogger,
+	database *firestore.Client,
+	slug string,
+) (float64, bool) {
+	var err error
+	// If slug is in collectionDenylist, return
+	if utils.Contains(collectionDenylist, slug) {
+		logger.Infow("Collection is in denylist", "collection", slug)
+		return 0, false
+	}
+	// Add collection to db
+	// c := Collection{
+	// 	Updated: time.Now(),
+	// }
+	floor := 0.0
+	// Get collection from Reservoir
+	opts := reservoir.GetCollectionsOptions{
+		Slug:              slug,
+		IncludeOwnerCount: true,
+	}
+	collections, err := reservoirClient.GetCollections(opts)
+	pretty.Print(collections)
+	pretty.Print(err)
+	// pretty.Print(c)
+	if err != nil {
+		logger.Error(err)
+		return floor, false
+	}
+
+	if len(collections.Collections) == 0 || len(collections.Collections) != 1 {
+		logger.Errorw("Unexpected collection count", "slug", slug, "count", len(collections.Collections))
+		return floor, false
+	}
+
+	// collection := collections.Collections[0]
+
+	// Get collection from OpenSea
+	// floor = getCollectionFromOpenSeaAndUpdateC(&c, slug, logger, openSeaClient)
+	// if slug == "cryptopunks" {
+	// 	// Fetch floor from NFT Floor Price
+	// 	floor, err = nftFloorPriceClient.GetFloorPriceFromCollection(slug)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 	}
+
+	// 	logger.Infow("Fetched floor from NFT Floor Price", "slug", slug, "floor", floor)
+	// 	c.Floor = floor
+	// }
+
+	// logger.Infow("Updating collection", "collection", slug, "floor", floor)
+
+	// // Add collection to db
+	// if floor > 0.0 && floor <= MaxFloorPrice {
+	// 	_, err = database.Collection("collections").Doc(slug).Set(ctx, c)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return floor, false
+	// 	}
+	// } else {
+	// 	logger.Infow("Floor was 0", "slug", slug)
+	// 	return floor, false
+	// }
+
+	// return floor, true
 	return floor, true
 }
 
@@ -378,7 +536,7 @@ func GetTopNFTs(ctx context.Context, logger *zap.SugaredLogger, nftstatsClient *
 	return resp
 }
 
-func adaptAttributes(attrs []entity.Attribute) []Attribute {
+func adaptAttributes(attrs []reservoir.Attribute) []Attribute {
 	var (
 		resp  []Attribute
 		floor float64

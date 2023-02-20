@@ -47,7 +47,7 @@ func (h *Handler) updateSingleCollection(slug string) (database.Collection, bool
 			"Error fetching collection from Firestore, trying to add collection",
 			"err", err,
 		)
-		floor, updated := database.AddCollectionToDB(h.Context, h.OpenSea, h.NFTFloorPrice, h.Logger, h.Database, slug)
+		floor, updated := database.AddCollectionToDBV2(h.Context, h.Reservoir, h.NFTFloorPrice, h.Logger, h.Database, slug)
 		h.Logger.Infow(
 			"Collection added",
 			"collection", slug,
@@ -66,7 +66,7 @@ func (h *Handler) updateSingleCollection(slug string) (database.Collection, bool
 	if docsnap.Exists() {
 		// Update collection
 		h.Logger.Info("Collection found, updating")
-		go database.UpdateCollectionStats(
+		go database.UpdateCollectionStatsV2(
 			h.Context,
 			h.Logger,
 			h.OpenSea,
