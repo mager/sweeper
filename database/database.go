@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -317,7 +318,7 @@ func UpdateCollectionStatsV2(
 		{Path: "updated", Value: time.Now()},
 		{Path: "num", Value: numOwners},
 		{Path: "sales", Value: utils.RoundFloat(totalSales, 3)},
-		{Path: "supply", Value: totalSupply},
+		{Path: "supply", Value: adaptStringToFloat64(totalSupply)},
 		{Path: "thumb", Value: collection.Image},
 		// 		{Path: "topNFTs", Value: topNFTs},
 		// 		{Path: "attributes", Value: adaptAttributes(attritubes)},
@@ -560,4 +561,12 @@ func adaptAttributes(attrs []reservoir.Attribute) []Attribute {
 	}
 	return resp
 
+}
+
+func adaptStringToFloat64(s string) float64 {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0
+	}
+	return f
 }
