@@ -19,7 +19,7 @@ require (
 	go.uber.org/fx v1.17.1
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0
-	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c // indirect
 	google.golang.org/api v0.89.0
 	google.golang.org/genproto v0.0.0-20220725144611-272f38e5d71b // indirect
